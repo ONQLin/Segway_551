@@ -55,7 +55,7 @@ module Segway(clk,RST_n,INERT_SS_n,INERT_MOSI,INERT_SCLK,
   /////////////////////////////////////
   // Instantiate balance controller // got all 3
   ///////////////////////////////////					 
-  balance_cntrl #(fast_sim) iBAL(.clk(clk),.rst_n(rst_n),.vld(vld),.ptch(ptch),
+  balance_ctrl #(fast_sim) iBAL(.clk(clk),.rst_n(rst_n),.vld(vld),.ptch(ptch),
                      .ptch_rt(ptch_rt),.pwr_up(pwr_up),.rider_off(rider_off),
 					 .steer_pot(steer_pot),.en_steer(en_steer),.lft_spd(lft_spd),
 					 .rght_spd(rght_spd),.too_fast(too_fast));
@@ -75,7 +75,7 @@ module Segway(clk,RST_n,INERT_SS_n,INERT_MOSI,INERT_SCLK,
   mtr_drv iDRV(.clk(clk),.rst_n(rst_n),.lft_spd(lft_spd),   
                .rght_spd(rght_spd),.PWM1_lft(PWM1_lft),.PWM2_lft(PWM2_lft),
 			   .PWM1_rght(PWM1_rght),.PWM2_rght(PWM2_rght),
-			   .OVR_I_lft(OVR_I_lft),.OVR_I_rght(OVR_I_rght));
+			   .OVR_I_lft(OVR_I_lft),.OVR_I_rght(OVR_I_rght), .LED());
 	  
 	  
  ////////////////////////////////////////////////////////////

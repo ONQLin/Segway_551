@@ -44,7 +44,7 @@ Segway iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOSI(MOSI),
 			.piezo_n(piezo_n),.piezo(piezo),.RX(RX_TX));
 
 //// Instantiate UART_tx (mimics command from BLE module) //////
-UART_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
+uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
 
 /////////////////////////////////////
 // Instantiate reset synchronizer //

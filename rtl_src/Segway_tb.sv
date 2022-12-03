@@ -65,10 +65,13 @@ initial begin
 
   // send "g" to segway
   uart_tx_case(8'h67);
-  //{ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h8FF};
-  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd0, 12'd0, 12'd0, 12'h0};
+  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h8FF};
+  //{ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd0, 12'd0, 12'd0, 12'h0};
   wait(iDUT.pwr_up == 1);
+  repeat(300000) @(posedge clk);
   rider_lean = 16'h0fff;
+  repeat(800000) @(posedge clk);
+  rider_lean = 16'd0;
   repeat(800000) @(posedge clk);
   $stop();
 end

@@ -17,7 +17,7 @@ module spi_mnrch (
 );
 
 reg		 	sclk_en;
-reg[3:0] 	bit_cnt; 	// count the sclk number
+reg[4:0] 	bit_cnt; 	// count the sclk number
 reg[3:0] 	div_cnt;   // div cnt for sclk generate
 reg[15:0] 	shift_reg; // shift reg for miso and mosi
 reg 		miso_smpl; 
@@ -103,14 +103,13 @@ always_comb begin
 		end
 
 		FRONT: begin
-			if(smpl) begin // at the first negedge of SCLK, we dont want shift but a load, detect the first posedge and init the counter
+			if(smpl) begin // at the first negedge of SCLK, we dont want shift and load as wrt in
 				next_state = TRANSMIT;
-				init = 1;
 			end
 		end
 
 		TRANSMIT: begin
-			if(&bit_cnt) begin
+			if(bit_cnt == 16) begin
 				next_state = BACK;
 			end
 		end
@@ -120,6 +119,7 @@ always_comb begin
 				sclk_en = 1;
 				next_state = IDLE;
 				set_done = 1;
+				init = 1;
 			end
 		end
 	
@@ -134,9 +134,11 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
 		shift_reg <= 0;
+	end else if(wrt) begin
+		shift_reg <= wt_data;
 	end else if(shift) begin
-		shift_reg <= (cstate == FRONT) ? wt_data : {shift_reg[14:0],miso_smpl};
-	end 
+		shift_reg <= (bit_cnt == 0) ? shift_reg : {shift_reg[14:0],miso_smpl};
+	end
 end
 
 assign MOSI = shift_reg[15];

@@ -36,7 +36,7 @@ ADC128S_FC iA2D(.clk(clk),.rst_n(RST_n),.SS_n(A2D_SS_n),.SCLK(A2D_SCLK),
 			 .steerPot(steerPot),.batt(batt));			
 	 
 ////// Instantiate DUT ////////
-Segway iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOSI(MOSI),
+Segway #(.fast_sim(1)) iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOSI(MOSI),
             .INERT_SCLK(SCLK),.INERT_MISO(MISO),.INERT_INT(INT),.A2D_SS_n(A2D_SS_n),
 			.A2D_MOSI(A2D_MOSI),.A2D_SCLK(A2D_SCLK),.A2D_MISO(A2D_MISO),
 			.PWM1_lft(PWM1_lft),.PWM2_lft(PWM2_lft),.PWM1_rght(PWM1_rght),
@@ -56,13 +56,35 @@ initial begin
   /// Your magic goes here ///
   clk = 0;
   RST_n = 0;
-  @(negedge clk);
+  repeat(3) @(negedge clk);
   RST_n = 1;
-  
+  send_cmd = 0;
+  repeat(3) @(negedge clk);
+  rider_lean = 0;
+
+  // send "g" to segway
+  uart_tx_case(8'h67);
+  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h8FF};
+  wait(iDUT.pwr_up == 1);
+  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h8FF};
+  repeat(300000) @(posedge clk);
+  rider_lean = 16'h0fff;
+  repeat(800000) @(posedge clk);
   $stop();
 end
 
 always
   #10 clk = ~clk;
+  
+
+task uart_tx_case(input[7:0] tx_in);
+		@(negedge clk);
+		send_cmd = 1;
+		cmd = tx_in;
+		@(negedge clk);
+		send_cmd = 0;		// 1clk trmt, to capture and set txdata;
+		wait(cmd_sent == 1'b1); 	// serial data done, otherwise uart_tx is not sent
+		$display("tx data, %h, is sent",tx_in); 
+endtask : uart_tx_case
 
 endmodule	

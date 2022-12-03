@@ -12,7 +12,7 @@ endinterface
 // if it is local def. So set this interface as a global one.
 
 
-module Segway_tb();
+module Segway_tb_seq();
 
 import tb_tasks::*;
 //// Interconnects to DUT/support defined as type wire /////

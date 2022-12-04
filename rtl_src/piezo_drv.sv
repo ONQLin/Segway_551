@@ -26,7 +26,7 @@ module piezo_drv #(
 	output piezo_n
 );
 
-reg[23:0] note_cnt;
+reg[25:0] note_cnt;
 reg[14:0] frq_cnt;
 reg[27:0] rep_cnt;
 

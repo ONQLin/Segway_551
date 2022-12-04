@@ -1,11 +1,18 @@
+// stimulus and some output/internal signals are included in intf
+// make convenient to interact with func and task in package
 interface Seg_ports();          // external interaction with Segway 
       logic [7:0] cmd;				// command host is sending to DUT
       logic send_cmd;				// asserted to initiate sending of command
       logic signed [15:0] rider_lean;
       logic [11:0] ld_cell_lft, ld_cell_rght,steerPot,batt;	// A2D values
       logic OVR_I_lft, OVR_I_rght;
-      //check the output
+
+      //check the output ports, utilized in func or tasks
       logic cmd_sent;
+      logic piezo;
+      logic theta_platform;
+      logic a2d_vld;
+      logic pwr_up;
 endinterface
 // !!! Because package would be compiled in the module part. Then this
 // real interface would be conflexed with the Vif defined in the class
@@ -30,6 +37,10 @@ reg clk, RST_n;
 
 ///// Internal registers for testing purposes??? /////////
 Seg_ports Seg_intf();     // use Vif-->IF to bridge between Seg_drv class and DUT
+// connect internal value to check ports of intf
+assign Seg_intf.theta_platform = iPHYS.theta_platform; 
+assign Seg_intf.a2d_vld = iA2D.update_ch;  // a2d value update
+assign Seg_intf.pwr_up = iDUT.pwr_up; 
 
 ////////////////////////////////////////////////////////////////
 // Instantiate Physical Model of Segway with Inertial sensor //
@@ -52,7 +63,7 @@ Segway #(.fast_sim(1)) iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOS
 			.A2D_MOSI(A2D_MOSI),.A2D_SCLK(A2D_SCLK),.A2D_MISO(A2D_MISO),
 			.PWM1_lft(PWM1_lft),.PWM2_lft(PWM2_lft),.PWM1_rght(PWM1_rght),
 			.PWM2_rght(PWM2_rght),.OVR_I_lft(Seg_intf.OVR_I_lft),.OVR_I_rght(Seg_intf.OVR_I_rght),
-			.piezo_n(piezo_n),.piezo(piezo),.RX(RX_TX));
+			.piezo_n(piezo_n),.piezo(Seg_intf.piezo),.RX(RX_TX));
 
 //// Instantiate UART_tx (mimics command from BLE module) //////
 uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(Seg_intf.send_cmd),.tx_data(Seg_intf.cmd),.tx_done(Seg_intf.cmd_sent));
@@ -63,26 +74,23 @@ uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(Seg_intf.send_cmd),.tx_data
 rst_synch iRST(.clk(clk),.RST_n(RST_n),.rst_n(rst_n));
 
 initial begin
+
   Seg_drv seg_drv;
   seg_drv = new(Seg_intf);
-  seg_drv.init();
   /// Your magic goes here ///
+
+  // initialize
+  seg_drv.init();
   clk = 0;
   RST_n = 0;
   repeat(3) @(negedge clk);
   RST_n = 1;
   repeat(3) @(negedge clk);
-  // send "g" to segway
-  seg_drv.uart_tx_case(.clk(clk), .tx_in(8'h67));
-  seg_drv.rider_config(12'd400, 12'd300, 12'd200, 12'h8FF);
+  // end init
 
-  wait(iDUT.pwr_up == 1);
-  $display("the Segway has powered up");
-  repeat(300000) @(posedge clk);
-  seg_drv.vif.rider_lean = 16'h0;
-  repeat(800000) @(posedge clk);
-  seg_drv.vif.rider_lean = 16'd0;
-  repeat(800000) @(posedge clk);
+  // send "g" to segway
+  seg_drv.seg_test_seq1(clk);
+  $display("watch the Analog form of theta and ptch to check the balancing");
   $stop();
 end
 

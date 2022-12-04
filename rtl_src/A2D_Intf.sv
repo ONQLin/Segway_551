@@ -91,20 +91,16 @@ module A2D_intf (
   	// allowable to feed this cmd after wrt
   	///////////////////////////////////////////////////////////////
 	always_comb begin
-		if(cstate == WR) begin
-			case (round_rb)
-				2'b00: 
-					spi_cmd = {{2'b00}, {3'd0}, {11'h000}};
-				2'b01: 
-					spi_cmd = {{2'b00}, {3'd4}, {11'h000}};
-				2'b10: 
-					spi_cmd = {{2'b00}, {3'd5}, {11'h000}};
-				2'b11: 
-					spi_cmd = {{2'b00}, {3'd6}, {11'h000}};
-			endcase
-		end else begin
-			spi_cmd = 16'd0;
-		end
+		case (round_rb)
+			2'b00: 
+				spi_cmd = {{2'b00}, {3'd0}, {11'h000}};
+			2'b01: 
+				spi_cmd = {{2'b00}, {3'd4}, {11'h000}};
+			2'b10: 
+				spi_cmd = {{2'b00}, {3'd5}, {11'h000}};
+			2'b11: 
+				spi_cmd = {{2'b00}, {3'd6}, {11'h000}};
+		endcase
 	end
 
 	///////////////////////////////////////////////////////////////

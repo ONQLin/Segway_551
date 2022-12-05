@@ -61,7 +61,7 @@ initial begin
   send_cmd = 0;
   repeat(3) @(negedge clk);
   rider_lean = 0;
-  {OVR_I_lft, OVR_I_rght} = {0,0};
+	{OVR_I_lft, OVR_I_rght} = {1'b0,1'b0};
 
   // send "g" to segway
   uart_tx_case(8'h67);

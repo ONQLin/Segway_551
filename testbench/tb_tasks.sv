@@ -31,7 +31,7 @@ package tb_tasks;
 
                   ////// Stage 1: Testing Auth with rider off/on | cover iAuth A2D iBUZZ iSTR... ///////
                   fork
-                        begin
+                        begin                         // testor meanwhile check some states                                          
                               // send "g" to power on the device
                               uart_tx_case(.clk(clk), .tx_in(8'h67));
                               wait_bauds(12);
@@ -55,29 +55,13 @@ package tb_tasks;
                               end
                               {piezo_check, platform_check} = {1'b0,1'b0};
                         end
-                        begin : pizeo_ck_proc
-                              while(1) begin
-                                    #100;
-                                    if(vif.piezo == 1'b1) begin
-                                          $error("no state changes now!!!");
-                                          $stop;
-                                    end
-                                    if(piezo_check == 0)
-                                          break;
-                              end
-                              $display("pizeo_ck_proc 1 pass");
+
+                        begin : pizeo_ck_proc         //scoreboard check for piezo
+                              quiet_piezo_ck();
                         end : pizeo_ck_proc
-                        begin : pltf_ck_proc
-                              while(1) begin
-                                    #100;
-                                    if(vif.theta_platform != 0) begin
-                                          $error("no state changes now!!!");
-                                          $stop;
-                                    end
-                                    if(platform_check == 0)
-                                          break;
-                              end
-                              $display("pltf_ck_proc 1 pass");
+
+                        begin : pltf_ck_proc          //scoreboard check for platform
+                              plain_platform_ck(15'd10);
                         end : pltf_ck_proc
                   join
                   // rider on and start steer
@@ -97,7 +81,8 @@ package tb_tasks;
                   end else begin
                         $display("------Step3: rider on pwr on pass!------");
                   end
-
+                  ////// Stage 2: Testing rider on with some step lean and watch the balance control ///////
+                  ////// cover  iBAL iDRV iBuzz iNemo...//////
                   piezo_check = 1;
                   fork
                         begin
@@ -111,8 +96,20 @@ package tb_tasks;
                         steer_piezo_ck();
                   join
                   $display("------Step4: watch rider on seg with lean passes!------");
-            endtask
+            endtask : seg_test_seq1
 
+            ////////////////////////////////////////
+            // Seq 2 applies random rider lean    //
+            // and different states of steer      //
+            // and exert some step lean to check  //
+            // whether balance is controled or not//
+            ////////////////////////////////////////
+            task seg_test_seq2();
+                  
+            endtask : seg_test_seq2
+
+
+            ////// Testor func or tasks: some can integrated to interfaces but not ///////
             task automatic uart_tx_case(input[7:0] tx_in, ref clk);
                   @(negedge clk);
                   vif.send_cmd = 1;
@@ -136,6 +133,8 @@ package tb_tasks;
                   repeat(len*2) #30000 uclk = ~uclk;
             endtask
 
+
+            ////// Scoreboard tasks: checking simple components ///////
             task steer_piezo_ck();
                   reg[8:0] piezo_cnt;
                   reg[1:0] wait_cnt = 2'b00;
@@ -168,6 +167,46 @@ package tb_tasks;
                   disable piezo_counter;
                   $display("steer_piezo_ck passes!!!");
             endtask
+
+            task plain_platform_ck(input[14:0] limit);
+                  while(1) begin
+                        #100;
+                        if($signed(vif.theta_platform) > limit || ($signed(vif.theta_platform) < ~limit)) begin
+                              $error("no state changes now!!!");
+                              $stop;
+                        end
+                        if(platform_check == 0)
+                              break;
+                  end
+                  $display("pltf_ck_proc 1 pass"); 
+            endtask : plain_platform_ck
+
+            task quiet_piezo_ck();
+                  while(1) begin
+                        #40;
+                        if(vif.piezo == 1'b1) begin
+                              $error("no state changes now!!!");
+                              $stop;
+                        end
+                        if(piezo_check == 0)
+                              break;
+                  end
+                  $display("pizeo_ck_proc 1 pass");
+            endtask : quiet_piezo_ck
+
       endclass
 
 endpackage : tb_tasks
+
+
+
+
+
+
+
+
+
+
+
+
+

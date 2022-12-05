@@ -10,7 +10,7 @@ interface Seg_ports();          // external interaction with Segway
       //check the output ports, utilized in func or tasks
       logic cmd_sent;
       logic piezo;
-      logic theta_platform;
+      logic signed[15:0] theta_platform;
       logic a2d_vld;
       logic pwr_up;
 endinterface

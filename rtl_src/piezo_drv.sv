@@ -1,10 +1,10 @@
 module piezo_drv #(
 	parameter fast_sim = 0,
 	parameter div_note = (fast_sim) ? 17'h02000 : 1,	// divider for fast_sim
-	parameter note_len_1_2 = $pow(2,24)/div_note, 	// last G7 1/2 note
-	parameter note_len_1_4 = $pow(2,23)/div_note, 	// 123 G6 C7 E7 1/4 note
-	parameter note_len_1_8 = $pow(2,22)/div_note,	// last 2nd E7 1/8 note
-	parameter note_len_3_8 = ($pow(2,23)+$pow(2,22))/div_note,	//4th G7 3/8 note
+	parameter note_len_1 = 26'h2000000/div_note, 	// last G7 1/2 note
+	parameter note_len_1_4 = 24'h800000/div_note, 	// 123 G6 C7 E7 1/4 note
+	parameter note_len_1_8 = 23'h400000/div_note,	// last 2nd E7 1/8 note
+	parameter note_len_3_8 = (24'h800000+23'h400000)/div_note,	//4th G7 3/8 note
 
 	parameter div_frq = (fast_sim) ? 1000 : 1,	//divider for fast_sim	
 	parameter G6_frq = 31888/div_frq, 			//divider for G6 frq
@@ -137,16 +137,15 @@ always_comb begin
 			rep_en = 0;
 			note_en = 0;
 			cmd_clr = 1;
+			rep_clr = 1;
 			if(cmd == FAST) begin
-				nstate = NOTE1;
+				nstate = NOTE1;	
 				note_clr = 1;
 			end else if(cmd == BATT) begin
 				nstate = NOTE6;
-				rep_clr = 1;
 				note_clr = 1;
 			end else if(cmd == STEER) begin
 				nstate = NOTE1;
-				rep_clr = 1;
 				note_clr = 1;
 			end
 		end

@@ -27,6 +27,7 @@ module balance_ctrl #(
 		 .ss_tmr(ss_tmr));
 
 	SegwayMath seg_inst(
+		.clk		(clk),
 		.PID_cntrl	(PID_cntrl),
 		.ss_tmr		(ss_tmr),
 		.steer_pot	(steer_pot),

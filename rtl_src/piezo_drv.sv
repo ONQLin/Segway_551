@@ -192,7 +192,7 @@ always_comb begin
 
 		NOTE6: begin
 			frq_sel = 2'b11;
-			if(note_cnt == note_len_1_2) begin
+			if(note_cnt == note_len_1) begin
 				nstate = (cmd == FAST) ? IDLE1:((cmd == BATT) ? NOTE5 : WAITING);
 				note_clr = 1;
 			end

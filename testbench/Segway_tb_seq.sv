@@ -1,3 +1,4 @@
+
 // stimulus and some output/internal signals are included in intf
 // make convenient to interact with func and task in package
 interface Seg_ports();          // external interaction with Segway 
@@ -13,6 +14,8 @@ interface Seg_ports();          // external interaction with Segway
       logic signed[15:0] theta_platform;
       logic a2d_vld;
       logic pwr_up;
+      reg[1:0] wait_cnt;
+      reg[8:0] piezo_cnt;
 endinterface
 // !!! Because package would be compiled in the module part. Then this
 // real interface would be conflexed with the Vif defined in the class

@@ -37,7 +37,8 @@ package tb_tasks;
                               if(vif.pwr_up == 1'b1) begin
                                     $display("------Step1: rider off pwr on pass!------"); 
                               end else begin
-                                    $error("without rider, it should also pwr");      
+                                    $error("without rider, it should also pwr"); 
+				    #200_000;     
                                     $stop;
                               end
                               // waiting for lft rght data received
@@ -168,31 +169,31 @@ package tb_tasks;
 
             ////// Scoreboard tasks: checking simple components ///////
             task steer_piezo_ck();
-                  reg[8:0] piezo_cnt;
-                  reg[1:0] wait_cnt = 2'b00;
+                  //reg[8:0] piezo_cnt;
+                  //reg[1:0] wait_cnt = 2'b00;
                   int i, j;
                   fork
                         while(piezo_check == 1'b1) begin : piezo_counter
                               @(posedge vif.piezo);
-                              wait_cnt = 2'b00;
-                              piezo_cnt = piezo_cnt + 1;
-                              if(piezo_cnt > 360) begin
-                                    $error("steer piezo goes wrong : %d, round %d!!!", piezo_cnt, i);
+                              vif.wait_cnt = 2'b00;
+                              vif.piezo_cnt = vif.piezo_cnt + 1;
+                              if(vif.piezo_cnt > 500) begin
+                                    $display("steer piezo goes wrong : %d, round %d!!!", vif.piezo_cnt, i);
                                     $stop;
                               end
                               i++;
                         end : piezo_counter
                         while(piezo_check == 1'b1) begin : waiting_piezo
                               #20_000;
-                              if(wait_cnt==2'b01) begin
-                                    if((piezo_cnt <350) || (piezo_cnt > 370)) begin
-                                          $error("steer piezo goes wrong : %d round %d!!!!!!", piezo_cnt, j);
+                              if(vif.wait_cnt==2'b01) begin
+                                    if((vif.piezo_cnt <450) || (vif.piezo_cnt > 500)) begin
+                                          $error("steer piezo goes wrong : %d round %d!!!!!!", vif.piezo_cnt, j);
                                           $stop;
                                     end
-                                    piezo_cnt = 0;
-                                    wait_cnt[1] = 1; // only reset once when it hits waiting
+                                    vif.piezo_cnt = 0;
+                                    vif.wait_cnt[1] = 1; // only reset once when it hits waiting
                               end
-                              wait_cnt[0] = 1;
+                              vif.wait_cnt[0] = 1;
                               j++;
                         end : waiting_piezo
                   join_any

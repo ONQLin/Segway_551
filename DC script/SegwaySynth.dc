@@ -1,7 +1,6 @@
-read_file -format sverilog {A2D_Intf.sv ADC128S_FC.sv Auth_blk.sv balance_ctrl.sv inert_intf.sv \
-			inertial_integrator.sv mtr_drv.sv PB_release.sv PID.sv piezo_drv.sv PWM11.sv rst_synch.sv \
-			SegwayMath.sv SegwayModel.sv SPI_ADC128S.sv SPI_iNEMO1.sv spi_mnrch.sv steer_en.sv \
-			steer_en_SM.sv uart_rx.sv uart_tx.sv up_dwn_cnt4.sv Segway.sv}
+read_file -format sverilog { piezo_drv.sv A2D_intf.sv PWM11.sv mtr_drv.sv steer_en_SM.sv steer_en.sv \
+							SegwayMath.sv PID.sv balance_cntrl.sv inertial_integrator.sv spi_mnrch.sv \
+							inert_intf.sv uart_rx.sv Auth_blk.sv Segway.sv}
 set current_design Segway
 
 ##############################

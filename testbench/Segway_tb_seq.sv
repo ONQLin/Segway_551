@@ -20,7 +20,7 @@ endinterface
 
 
 module Segway_tb_seq();
-
+`include "define.svh"
 import tb_tasks::*;
 //// Interconnects to DUT/support defined as type wire /////
 wire SS_n,SCLK,MOSI,MISO,INT;				// to inertial sensor
@@ -79,19 +79,27 @@ initial begin
   seg_drv = new(Seg_intf);
   /// Your magic goes here ///
 
-  // initialize
-  seg_drv.init();
   clk = 0;
   RST_n = 0;
   repeat(3) @(negedge clk);
   RST_n = 1;
   repeat(3) @(negedge clk);
-  // end init
 
-  // send "g" to segway
-  seg_drv.seg_test_seq1(clk);
-  $display("watch the Analog form of theta and ptch to check the balancing");
-  $stop();
+  `ifdef TP1
+    seg_drv.init();
+    seg_drv.seg_test_seq1(clk);
+    $display("watch the Analog form of theta and ptch to check the balancing");
+  `endif
+
+  `ifdef TP2
+    seg_drv.init();
+    seg_drv.seg_test_seq2(clk);
+    $display("watch the Analog form of theta and ptch to check the balancing");
+  `endif
+
+
+  $stop;
+
 end
 
 always

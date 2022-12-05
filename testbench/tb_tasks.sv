@@ -34,7 +34,6 @@ package tb_tasks;
                         begin                         // testor meanwhile check some states                                          
                               // send "g" to power on the device
                               uart_tx_case(.clk(clk), .tx_in(8'h67));
-                              wait_bauds(12);
                               if(vif.pwr_up == 1'b1) begin
                                     $display("------Step1: rider off pwr on pass!------"); 
                               end else begin
@@ -45,8 +44,6 @@ package tb_tasks;
                               repeat(4) @(posedge vif.a2d_vld);
                               // send "s"
                               uart_tx_case(.clk(clk), .tx_in(8'h73));
-                              wait_bauds(12);
-                              //rider_config(12'd400, 12'd300, 12'd200);
                               if(vif.pwr_up == 1'b0) begin
                                     $display("------Step2: rider off pwr off pass!------");
                               end else begin
@@ -54,27 +51,19 @@ package tb_tasks;
                                     $stop;
                               end
                               {piezo_check, platform_check} = {1'b0,1'b0};
-                        end
-
-                        begin : pizeo_ck_proc         //scoreboard check for piezo
-                              quiet_piezo_ck();
-                        end : pizeo_ck_proc
-
-                        begin : pltf_ck_proc          //scoreboard check for platform
-                              plain_platform_ck(15'd10);
-                        end : pltf_ck_proc
+                        end      
+                        quiet_piezo_ck();             //scoreboard check for piezo                                 
+                        plain_platform_ck(15'd10);    //scoreboard check for platform                     
                   join
                   // rider on and start steer
                   rider_config(12'd400, 12'd300, 12'd200);
                   repeat(4) @(posedge vif.a2d_vld);
                   uart_tx_case(.clk(clk), .tx_in(8'h67));
-                  wait_bauds(12);
                   if(vif.pwr_up == 1'b0) begin
                         $error("one should power up");
                         $stop;
                   end
                   uart_tx_case(.clk(clk), .tx_in(8'h73));
-                  wait_bauds(12);
                   if(vif.pwr_up == 1'b0) begin
                         $error("one should power up");
                         $stop;
@@ -104,8 +93,50 @@ package tb_tasks;
             // and exert some step lean to check  //
             // whether balance is controled or not//
             ////////////////////////////////////////
-            task seg_test_seq2();
-                  
+            task seg_test_seq2(ref clk);
+                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  rider_config(12'd300, 12'd400, 12'd200);              //rider on and steer en      
+                  repeat(4) @(posedge vif.a2d_vld);
+                  piezo_check = 1;
+                  fork
+                        begin
+                              for(int i = 0; i < 4; i=i+1) begin 
+                                    random_leaning(16'h0, 16'h0fff);
+                                    repeat(600000) @(posedge clk);
+                              end
+                              piezo_check = 0;
+                        end
+                        steer_piezo_ck();             //scoreboard check for piezo steer
+                  join
+                  $display("------Step1: watch steer en with lean!------");
+                  rider_config(12'd1000, 12'd10, 12'd200);              //rider on and steer off      
+                  repeat(4) @(posedge vif.a2d_vld);                     //piezo should be off in this case
+                  piezo_check = 1;
+                  fork
+                        begin
+                              for(int i = 0; i < 4; i=i+1) begin 
+                                    random_leaning(16'h0, 16'h0fff);
+                                    repeat(600000) @(posedge clk);
+                              end      
+                              piezo_check = 0;
+                        end
+                        quiet_piezo_ck();             //scoreboard check for piezo quiet
+                  join
+                  $display("------Step2: watch steer off with lean!------");
+                  rider_config(12'd20, 12'd20, 12'd200, 12'd100);       //all off but batt low 
+                  repeat(4) @(posedge vif.a2d_vld);
+                  piezo_check = 1;
+                  fork                          
+                        begin
+                              for(int i = 0; i < 4; i=i+1) begin 
+                                    random_leaning(16'h0, 16'h0fff);
+                                    repeat(600000) @(posedge clk);
+                              end      
+                              piezo_check = 0;
+                        end
+                        batt_piezo_ck();             //scoreboard check for piezo batt
+                  join
+                  $display("------Step3: watch rider off batt low with lean!------");
             endtask : seg_test_seq2
 
 
@@ -117,7 +148,8 @@ package tb_tasks;
                   @(negedge clk);
                   vif.send_cmd = 0;		// 1clk trmt, to capture and set txdata;
                   wait(vif.cmd_sent == 1'b1); 	// serial data done, otherwise uart_tx is not sent
-                  $display("tx data, %h, is sent",tx_in);   
+                  $display("tx data, %h, is sent",tx_in);
+                  wait_bauds(12);   
             endtask
 
             function void rider_config(input[11:0] lcl, input[11:0] lcr, input[11:0] sp, input[11:0] bt=12'h8FF);
@@ -171,7 +203,7 @@ package tb_tasks;
             task plain_platform_ck(input[14:0] limit);
                   while(1) begin
                         #100;
-                        if($signed(vif.theta_platform) > limit || ($signed(vif.theta_platform) < ~limit)) begin
+                        if($signed(vif.theta_platform) > $signed(limit) || ($signed(vif.theta_platform) < $signed(~limit))) begin
                               $error("no state changes now!!!");
                               $stop;
                         end
@@ -191,8 +223,30 @@ package tb_tasks;
                         if(piezo_check == 0)
                               break;
                   end
-                  $display("pizeo_ck_proc 1 pass");
+                  $display("quiet_piezo_ck pass!");
             endtask : quiet_piezo_ck
+
+            task batt_piezo_ck();
+                  reg[2:0] wait_cnt = 0;
+                  int i;
+                  fork
+                        while(piezo_check == 1'b1) begin : piezo_trig
+                              @(posedge vif.piezo);
+                              wait_cnt = 0;
+                        end : piezo_trig
+                        while(piezo_check == 1'b1) begin
+                              #20_000;
+                              wait_cnt = wait_cnt + 1;
+                              if(&wait_cnt) begin
+                                    $display("it is not batt or fast mode!!! round %d", i);
+                                    $stop;
+                              end
+                              i++;
+                        end
+                  join_any
+                  disable piezo_trig;
+                  $display("batt_piezo_ck passes!!!");
+            endtask : batt_piezo_ck
 
       endclass
 

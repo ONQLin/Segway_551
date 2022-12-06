@@ -32,7 +32,7 @@ module Segway#(parameter fast_sim = 0)(clk,RST_n,INERT_SS_n,INERT_MOSI,INERT_SCL
   wire rider_off;           // from steer_en to auth_blk
   wire batt_low;
   wire too_fast;
-  wire pwr_up;              // asserted from Auth_blk to balance_cntrl to enable unit
+  (* set_dont_touch = "true" *)wire pwr_up;              // asserted from Auth_blk to balance_cntrl to enable unit
   wire OVR_I_lft,OVR_I_rght;
   
   localparam BATT_THRES = 12'h800;

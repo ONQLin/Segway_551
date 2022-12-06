@@ -39,10 +39,7 @@ set_wire_load_model -name 16000 -library saed32lvt_tt0p85v25c
 ######################
 set_max_transition 0.10 Segway
 
-# set_multicycle_path 2 -setup -from [find pin iNEMO/ptch_*_reg*/CLK]
-# set_multicycle_path 2 -setup -from [find pin iNEMO/AZ*_reg*/CLK]
-# set_multicycle_path 2 -hold -from [find pin iNEMO/ptch_*_reg*/CLK]
-# set_multicycle_path 2 -hold -from [find pin iNEMO/AZ*_reg*/CLK]
+# set_dont_touch pwr_up
 
 ########################################
 # Now add clock uncertainty & fix hold #

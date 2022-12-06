@@ -17,9 +17,9 @@ module SegwayMath #(
 );
 
 wire[19:0]	PID_ss_i;
-wire signed[12:0]	PID_ss;
+logic signed[12:0]	PID_ss;
 wire[11:0]	steer_pot_i;
-logic signed[11:0] steer_pot_res1, steer_pot_res2;
+wire signed[11:0] steer_pot_res1, steer_pot_res2;
 
 wire signed [12:0] lft_torque, rght_torque;
 wire signed [12:0] lft_torque_comp, lft_torque_gain;
@@ -31,7 +31,6 @@ wire[12:0]		   rght_torque_abs;
 wire signed [12:0] rght_shaped_i, rght_shaped;
 
 assign PID_ss_i = (PID_cntrl * $signed({1'b0, ss_tmr})); 
-assign PID_ss 	= {PID_ss_i[19] ,PID_ss_i[19:8]};	// >>>8 + ext, get final PID_ss
 
 //-------------------give ramp up steer to get torque------------------------------
 assign steer_pot_i = (steer_pot < 'h200) ? 'h200 :
@@ -39,14 +38,15 @@ assign steer_pot_i = (steer_pot < 'h200) ? 'h200 :
 generate
 	if(PIPELINED) begin
 		always@(posedge clk) begin
-			steer_pot_res1 <= ($signed(steer_pot_i - 12'h7ff)) >>> 4;
-			steer_pot_res2 <= $signed(steer_pot_res1 * 3);
+			PID_ss <= {PID_ss_i[19] ,PID_ss_i[19:8]};	// >>>8 + ext, get final PID_ss
 		end
 	end else begin
-		assign steer_pot_res1 = ($signed(steer_pot_i - 12'h7ff)) >>> 4;
-		assign steer_pot_res2 = $signed(steer_pot_res1 * 3);		//get final steer pot
+		assign PID_ss = {PID_ss_i[19] ,PID_ss_i[19:8]};	// >>>8 + ext, get final PID_ss
 	end
 endgenerate
+
+assign steer_pot_res1 = ($signed(steer_pot_i - 12'h7ff)) >>> 4;
+assign steer_pot_res2 = $signed(steer_pot_res1 * 3);		//get final steer pot
 
 assign lft_torque = (en_steer) ? $signed(PID_ss + steer_pot_res2) : PID_ss;
 assign rght_torque = (en_steer) ? $signed(PID_ss - steer_pot_res2) : PID_ss; // get final torque

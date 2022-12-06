@@ -1,7 +1,8 @@
 module PID #(
 	parameter P_COEFF = 5'h0C,
 	parameter fast_sim = 0,
-	parameter TMR_INC = (fast_sim) ? 256 : 1
+	parameter TMR_INC = (fast_sim) ? 256 : 1,
+	parameter PIPELINED = 1
 )
 (
 	input signed  [15:0]	ptch,			//for pterm and iterm
@@ -18,7 +19,7 @@ module PID #(
 );
 	wire signed [9:0]	ptch_err_sat;
 	wire signed [15:0]	P_term, I_term, D_term;
-	wire signed [16:0]	PID_cntrl_i;
+	logic signed [16:0]	PID_cntrl_i;
 	wire signed [17:0]  ptch_err_sat_ext;
 	wire				ov;
 	reg signed[17:0] 	integrator;
@@ -77,7 +78,16 @@ module PID #(
 	assign D_term = ~{{6{ptch_rt[15]}}, ptch_rt[15:6]};
 	
 	// add together
-	assign PID_cntrl_i = P_term + I_term + D_term;
+	generate
+		if(PIPELINED) begin
+			always_ff@(posedge clk) begin
+				PID_cntrl_i <= P_term + I_term + D_term;
+			end
+		end else begin
+			assign PID_cntrl_i = P_term + I_term + D_term;
+		end
+	endgenerate
+	
 	
 	// 12bits sat
 	assign PID_cntrl = (~PID_cntrl_i[16]) ? ((|PID_cntrl_i[15:11]) ? 12'h7FF : {1'b0, PID_cntrl_i[10:0]}) :

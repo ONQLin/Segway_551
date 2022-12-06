@@ -1,7 +1,7 @@
 read_file -format sverilog {piezo_drv.sv A2D_Intf.sv PWM11.sv mtr_drv.sv steer_en_SM.sv steer_en.sv \
 							SegwayMath.sv PID.sv balance_ctrl.sv inertial_integrator.sv spi_mnrch.sv \
 							inert_intf.sv uart_rx.sv Auth_blk.sv Segway.sv rst_synch.sv}
-							
+
 set current_design Segway
 link
 
@@ -75,5 +75,5 @@ report_timing -delay min -nworst 1
 report_timing -delay max -nworst 1
 
 report_area
-#write -format verilog balance_cntrl -output Segway.vg
+write -format verilog Segway -output Segway.vg
 

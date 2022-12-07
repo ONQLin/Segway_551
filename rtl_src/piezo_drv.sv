@@ -201,7 +201,7 @@ always_comb begin
 		WAITING: begin
 			note_en = 0;
 			cmd_clr = 1;
-			if((rep_cnt == repeat_len) || (cmd != STEER)) begin
+			if((rep_cnt == repeat_len) || (cmd == FAST)) begin
 				nstate = IDLE1;
 			end
 		end

@@ -33,14 +33,22 @@ package tb_tasks;
                   fork
                         begin                         // testor meanwhile check some states                                          
                               // send "g" to power on the device
+                              repeat(4) @(posedge vif.a2d_vld);
                               uart_tx_case(.clk(clk), .tx_in(8'h67));
-                              if(vif.pwr_up == 1'b1) begin
-                                    $display("------Step1: rider off pwr on pass!------"); 
+                              if(vif.pwr_up == 1'b0) begin
+                                    $display("------Step1: rider off pwr not on pass!------"); 
                               end else begin
                                     $error("without rider, it should also pwr");     
                                     $stop;
                               end
+                              rider_config(12'd400, 12'd300, 12'd200);
                               // waiting for lft rght data received
+                              repeat(4) @(posedge vif.a2d_vld);
+                              if(vif.pwr_up == 1'b0) begin
+                                    $error("one should power up");
+                                    $stop;
+                              end
+                              rider_config(12'd0, 12'd0, 12'd0);
                               repeat(4) @(posedge vif.a2d_vld);
                               // send "s"
                               uart_tx_case(.clk(clk), .tx_in(8'h73));

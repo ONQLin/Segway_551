@@ -42,9 +42,8 @@ module Auth_blk (
 		case (cstate)
 			OFF: begin
 				pwr_up = 0;
-				if(g) begin
-					next_state = (~rider_off) ? PWR1 : OFF;
-					//pwr_up = 1;
+				if(g&~rider_off) begin
+					next_state = PWR1;
 					clr_rx_rdy = 1;
 				end
 			end
@@ -53,7 +52,6 @@ module Auth_blk (
 				if(s&rider_off) begin
 					next_state = OFF;
 					clr_rx_rdy = 1;
-					pwr_up = 0;
 				end else if(s & ~rider_off) begin
 					next_state = PWR2;
 					clr_rx_rdy = 1;
@@ -66,13 +64,11 @@ module Auth_blk (
 					clr_rx_rdy = 1;
 				end else if(rider_off) begin
 					next_state = OFF;
-					pwr_up = 0;
 				end
 			end
 
 			default : begin
 				next_state = OFF;
-				pwr_up = 0;
 			end
 
 		endcase

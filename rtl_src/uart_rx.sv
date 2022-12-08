@@ -15,19 +15,20 @@ module uart_rx #(
 
 typedef enum reg[1:0] {IDLE, WAITING, RECEIVE} state_t;
 
-state_t [1:0] cstate, next_state;
+state_t cstate, next_state;
 
 reg[8:0]	rx_shift_reg;
 reg[3:0]	bit_cnt;
 reg[11:0]	baud_cnt;	//actually I want to use $log2(div_num)
 reg[2:0]    rx_bit;
+reg		start; 	//signal the start of new batch
 wire[11:0]  baud_len = ((bit_cnt == 0) || (bit_cnt == 10)) ? div_num/2 : div_num; // (default)full: 2604, half:1302
 
 wire		start_pulse_down;	// signal the start baud
 
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		cstate <= 0;
+		cstate <= IDLE;
 	end else begin
 		cstate <= next_state;
 	end
@@ -42,10 +43,12 @@ always_comb begin
 		next_state = IDLE;
 	end else begin
 		next_state = cstate;
+		start = 0;
 		case (cstate)
 			IDLE: begin
 				if(start_pulse_down) begin
 					next_state = WAITING;
+					start = 1;
 				end
 			end
 
@@ -83,7 +86,7 @@ end
 always_ff @(posedge clk or negedge rst_n) begin 	//bit_cnt counts 8bit transfer
 	if(~rst_n) begin
 		bit_cnt <= 0;
-	end else if(clr_rdy == 1'b1) begin 				//reset the bit_cnt when rdata rcv
+	end else if(start | clr_rdy) begin 				//reset the bit_cnt when new data come
 		bit_cnt <= 0;
 	end else if(cstate == RECEIVE) begin
 		bit_cnt <= bit_cnt + 1;
@@ -122,10 +125,10 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
 		rdy <= 0;
-	end else if(clr_rdy) begin
-		rdy <= 0;
-	end else if((cstate == IDLE) && (bit_cnt == 11)) begin
+	end else if((bit_cnt == 11) && (cstate == IDLE)) begin
 		rdy <= 1;
+	end else begin
+		rdy <= 0;
 	end
 end
 

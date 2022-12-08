@@ -43,8 +43,8 @@ module Auth_blk (
 			OFF: begin
 				pwr_up = 0;
 				if(g) begin
-					next_state = PWR1;
-					pwr_up = 1;
+					next_state = (~rider_off) ? PWR1 : OFF;
+					//pwr_up = 1;
 					clr_rx_rdy = 1;
 				end
 			end

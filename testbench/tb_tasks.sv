@@ -37,8 +37,7 @@ package tb_tasks;
                               if(vif.pwr_up == 1'b1) begin
                                     $display("------Step1: rider off pwr on pass!------"); 
                               end else begin
-                                    $error("without rider, it should also pwr"); 
-				    #200_000;     
+                                    $error("without rider, it should also pwr");     
                                     $stop;
                               end
                               // waiting for lft rght data received
@@ -107,9 +106,9 @@ package tb_tasks;
                               end
                               piezo_check = 0;
                         end
-                        steer_piezo_ck();             //scoreboard check for piezo steer
+                        steer_piezo_ck(1);             //scoreboard check for piezo steer
                   join
-                  $display("------Step1: watch steer en with lean!------");
+                  $display("------Step1: watch steer en with random lean!------");
                   rider_config(12'd1000, 12'd10, 12'd200);              //rider on and steer off      
                   repeat(4) @(posedge vif.a2d_vld);                     //piezo should be off in this case
                   piezo_check = 1;
@@ -123,7 +122,7 @@ package tb_tasks;
                         end
                         quiet_piezo_ck();             //scoreboard check for piezo quiet
                   join
-                  $display("------Step2: watch steer off with lean!------");
+                  $display("------Step2: watch steer off with random lean!------");
                   rider_config(12'd20, 12'd20, 12'd200, 12'd100);       //all off but batt low 
                   repeat(4) @(posedge vif.a2d_vld);
                   piezo_check = 1;
@@ -135,10 +134,85 @@ package tb_tasks;
                               end      
                               piezo_check = 0;
                         end
-                        batt_piezo_ck();             //scoreboard check for piezo batt
+                        steer_piezo_ck(1);             //scoreboard check for piezo batt similar to steer
                   join
                   $display("------Step3: watch rider off batt low with lean!------");
             endtask : seg_test_seq2
+
+            ///////////////////////////////////////////
+            // Seq 3 tests on the too_fast case with  //
+            // the configuration on OVR_I             //
+            ///////////////////////////////////////////
+            task automatic seg_test_seq3(ref clk, input[1:0] OVR = 2'b10);
+                  rider_config(12'hFFF,12'hFFF,12'hFFF);
+                  vif.rider_lean = 16'h0000;
+                  vif.OVR_I_lft = OVR[1];
+                  vif.OVR_I_rght = OVR[0];
+                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  if(vif.pwr_up == 1'b0) begin
+                        $error("one should power up");
+                        $stop;
+                  end
+                  repeat(200000) @(posedge clk);
+		      {vif.OVR_I_lft, vif.OVR_I_rght} = 2'b00;
+                  //Change ridere_lean to 0x0FFF and make it too fast
+                  piezo_check = 1;
+                  fork
+                        begin
+                              vif.rider_lean = 16'h0FFF;
+                              repeat(100000) @(posedge clk);
+                              vif.too_fast = 1'b1;
+                              repeat(100000) @(posedge clk);
+                              vif.too_fast = 1'b0;
+                              piezo_check = 0;
+                        end
+                        steer_piezo_ck(1);
+                  join
+                  //Change ridere_lean back to 0x0000, it changes from too fast to en_steer
+                  vif.rider_lean = 16'h0000;
+                  {vif.OVR_I_lft, vif.OVR_I_rght} = 2'b00;
+                  //rider_config(0,0,0);
+                  repeat(400000) @(posedge clk);
+                  //Make the battery low and check waveform
+                  vif.batt = 12'h000;
+                  repeat(200000) @(posedge clk);
+            endtask : seg_test_seq3
+
+            ///////////////////////////////////////////
+            // Seq 4 is similar to 3 tests on the     //
+            // too_fast case with the configuration on//
+            // OVR_I which invovl I shut down         //
+            ///////////////////////////////////////////
+            task automatic seg_test_seq4(ref clk, input[1:0] OVR = 2'b10);
+                  rider_config(12'hFFF,12'hFFF,12'hFFF);
+                  vif.rider_lean = 16'h0000;
+                  vif.OVR_I_lft = OVR[1];
+                  vif.OVR_I_rght = OVR[0];
+                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  if(vif.pwr_up == 1'b0) begin
+                        $error("one should power up");
+                        $stop;
+                  end
+                  repeat(200000) @(posedge clk);
+                  //Change ridere_lean to 0x0FFF and make it too fast
+                  piezo_check = 1;
+                  fork
+                        begin
+                              vif.rider_lean = 16'h0FFF;
+                              repeat(200000) @(posedge clk);
+                              piezo_check = 0;
+                        end
+                        steer_piezo_ck(1);
+                  join
+                  //Change ridere_lean back to 0x0000, it changes from too fast to en_steer
+                  vif.rider_lean = 16'h0000;
+                  {vif.OVR_I_lft, vif.OVR_I_rght} = 2'b00;
+                  //rider_config(0,0,0);
+                  repeat(400000) @(posedge clk);
+                  //Make the battery low and check waveform
+                  vif.batt = 12'h000;
+                  repeat(200000) @(posedge clk);
+            endtask : seg_test_seq4
 
 
             ////// Testor func or tasks: some can integrated to interfaces but not ///////
@@ -168,27 +242,38 @@ package tb_tasks;
 
 
             ////// Scoreboard tasks: checking simple components ///////
-            task steer_piezo_ck();
+            task steer_piezo_ck(input random = 1'b0);
                   //reg[8:0] piezo_cnt;
                   //reg[1:0] wait_cnt = 2'b00;
                   int i, j;
+                  reg log_done = 1;
                   fork
                         while(piezo_check == 1'b1) begin : piezo_counter
                               @(posedge vif.piezo);
                               vif.wait_cnt = 2'b00;
                               vif.piezo_cnt = vif.piezo_cnt + 1;
                               if(vif.piezo_cnt > 500) begin
-                                    $display("steer piezo goes wrong : %d, round %d!!!", vif.piezo_cnt, i);
-                                    $stop;
+                                    if(~random) begin
+                                          $display("steer piezo goes wrong : %d, round %d!!!", vif.piezo_cnt, i);
+                                          $stop;
+                                    end else if(log_done)begin
+                                          $display("!!!it is now too fast!!!");
+                                          log_done = 0;
+                                    end
                               end
                               i++;
                         end : piezo_counter
                         while(piezo_check == 1'b1) begin : waiting_piezo
                               #20_000;
                               if(vif.wait_cnt==2'b01) begin
+                                    log_done = 1;
                                     if((vif.piezo_cnt <450) || (vif.piezo_cnt > 500)) begin
-                                          $error("steer piezo goes wrong : %d round %d!!!!!!", vif.piezo_cnt, j);
-                                          $stop;
+                                          if(~random) begin
+                                                $error("steer piezo goes wrong : %d round %d!!!!!!", vif.piezo_cnt, j);
+                                                $stop;
+                                          end else begin
+                                                $display("!!!It met too_fast in the test!!!");
+                                          end
                                     end
                                     vif.piezo_cnt = 0;
                                     vif.wait_cnt[1] = 1; // only reset once when it hits waiting
@@ -198,6 +283,7 @@ package tb_tasks;
                         end : waiting_piezo
                   join_any
                   disable piezo_counter;
+                  vif.piezo_cnt = 'x;     //reset the piezo cnt for next check
                   $display("steer_piezo_ck passes!!!");
             endtask
 
@@ -227,18 +313,19 @@ package tb_tasks;
                   $display("quiet_piezo_ck pass!");
             endtask : quiet_piezo_ck
 
-            task batt_piezo_ck();
-                  reg[2:0] wait_cnt = 0;
+            task fast_piezo_ck();
+                  //reg[2:0] wait_cnt = 0;
                   int i;
+                  vif.wait_cnt = 0;
                   fork
                         while(piezo_check == 1'b1) begin : piezo_trig
                               @(posedge vif.piezo);
-                              wait_cnt = 0;
+                              vif.wait_cnt = 0;
                         end : piezo_trig
                         while(piezo_check == 1'b1) begin
                               #20_000;
-                              wait_cnt = wait_cnt + 1;
-                              if(&wait_cnt) begin
+                              vif.wait_cnt = vif.wait_cnt + 1;
+                              if(&(vif.wait_cnt)) begin
                                     $display("it is not batt or fast mode!!! round %d", i);
                                     $stop;
                               end
@@ -247,7 +334,7 @@ package tb_tasks;
                   join_any
                   disable piezo_trig;
                   $display("batt_piezo_ck passes!!!");
-            endtask : batt_piezo_ck
+            endtask : fast_piezo_ck
 
       endclass
 

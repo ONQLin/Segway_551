@@ -16,6 +16,7 @@ interface Seg_ports();          // external interaction with Segway
       logic pwr_up;
       reg[1:0] wait_cnt;
       reg[8:0] piezo_cnt;
+      logic too_fast;
 endinterface
 // !!! Because package would be compiled in the module part. Then this
 // real interface would be conflexed with the Vif defined in the class
@@ -25,6 +26,7 @@ endinterface
 module Segway_tb_seq();
 `include "define.svh"
 import tb_tasks::*;
+//`include "tb_tasks.sv"
 //// Interconnects to DUT/support defined as type wire /////
 wire SS_n,SCLK,MOSI,MISO,INT;				// to inertial sensor
 wire A2D_SS_n,A2D_SCLK,A2D_MOSI,A2D_MISO;	// to A2D converter
@@ -44,7 +46,6 @@ Seg_ports Seg_intf();     // use Vif-->IF to bridge between Seg_drv class and DU
 assign Seg_intf.theta_platform = iPHYS.theta_platform; 
 assign Seg_intf.a2d_vld = iA2D.update_ch;  // a2d value update
 assign Seg_intf.pwr_up = iDUT.pwr_up; 
-
 ////////////////////////////////////////////////////////////////
 // Instantiate Physical Model of Segway with Inertial sensor //
 //////////////////////////////////////////////////////////////	
@@ -81,9 +82,9 @@ initial begin
   Seg_drv seg_drv;
   seg_drv = new(Seg_intf);
   /// Your magic goes here ///
-
   clk = 0;
   RST_n = 0;
+  seg_drv.init();
   repeat(3) @(negedge clk);
   RST_n = 1;
   repeat(3) @(negedge clk);
@@ -91,13 +92,34 @@ initial begin
   `ifdef TP1
     seg_drv.init();
     seg_drv.seg_test_seq1(clk);
-    $display("watch the Analog form of theta and ptch to check the balancing");
+    $display("TEST1: watch the Analog form of theta and ptch to check the balancing");
   `endif
 
   `ifdef TP2
     seg_drv.init();
     seg_drv.seg_test_seq2(clk);
-    $display("watch the Analog form of theta and ptch to check the balancing");
+    $display("TEST2: watch the Analog form of theta and ptch to check the balancing");
+  `endif
+
+  `ifdef TP3
+    seg_drv.init();
+    fork
+      seg_drv.seg_test_seq3(clk, 2'b10);
+      begin                               // import is not like `include where can directly reference and force internal signals
+        wait(Seg_intf.too_fast == 1'b1);
+        force iDUT.iBAL.seg_inst.lft_shaped_sat = 12'd1800;
+        wait(Seg_intf.too_fast == 1'b0);
+        release iDUT.iBAL.seg_inst.lft_shaped_sat;
+      end
+    join
+    
+    $display("TEST3: watch the Analog form of theta and ptch to check the OVR");
+  `endif
+
+  `ifdef TP4
+    seg_drv.init();
+    seg_drv.seg_test_seq4(clk, 2'b01);
+    $display("TEST4: watch the Analog form of theta and ptch to check the OVR shut");
   `endif
 
 

@@ -54,7 +54,7 @@ add wave -position insertpoint sim:/Segway_tb_seq/iDUT/iAuth/cstate
 
 run -all
 dataset save sim wave1.wlf
-#write format wave wave1.do
+write format wave wave1.do
 
 set fp [open "/filespace/j/jlin445/ece551/demo/Segway_551/testbench/define.svh" w]
 puts $fp "`define TP2"
@@ -64,6 +64,7 @@ compile_files
 restart
 run -all
 dataset save sim wave2.wlf
+write format wave wave2.do
 
 set fp [open "/filespace/j/jlin445/ece551/demo/Segway_551/testbench/define.svh" w]
 puts $fp "`define TP3"
@@ -73,6 +74,7 @@ compile_files
 restart
 run -all
 dataset save sim waves3.wlf
+write format wave wave3.do
 
 set fp [open "/filespace/j/jlin445/ece551/demo/Segway_551/testbench/define.svh" w]
 puts $fp "`define TP4"
@@ -82,6 +84,7 @@ compile_files
 restart
 run -all
 dataset save sim wave4.wlf
+write format wave wave4.do
 
 # An overall test that to see the code coverage
 set fp [open "/filespace/j/jlin445/ece551/demo/Segway_551/testbench/define.svh" w+]
@@ -92,3 +95,4 @@ compile_files
 restart
 run -all
 dataset save sim wave5.wlf
+write format wave wave5.do

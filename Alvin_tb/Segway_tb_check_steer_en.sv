@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////
 //This test bench tests the trasition /////////////
 //of Auth_blk and steer_en.///////////////////////
-module Segway_new_tb();
+module Segway_check_steer_in();
 			
 //// Interconnects to DUT/support defined as type wire /////
 wire SS_n,SCLK,MOSI,MISO,INT;				// to inertial sensor
@@ -198,7 +198,7 @@ initial begin
 		disable timeout5;	//Continue testing
 	end
   join
-  //Now change ld_cell to assert diff_gt_15_16
+  //Now rider is stepping off, change ld_cell to assert diff_gt_15_16
   ld_cell_rght = 12'h020;
   ld_cell_lft = 12'h700;
   //Use parallel compound statement to check if diff_gt_15_16 is asserted
@@ -227,9 +227,51 @@ initial begin
 	$display("Test fails: rider_off is asserted after diff_gt_15_15 is asserted");
 	$stop();
   end
-  repeat(10000) @(negedge clk);
+  //Change ld_cell to 0x200 to go to en_steer
+  ld_cell_rght = 12'h200;
+  ld_cell_lft = 12'h200;
+  //Wait for en_steer be asserted
+  wait(iDUT.en_steer == 1);
+  //Send signal 's' but pwr_up will still be high since rider_off is not asserted
+  @(negedge clk);
+  cmd = 8'h73;
+  send_cmd = 1;
+  //Deassert send_cmd at not negedge of clk
+  @(negedge clk) send_cmd = 0;
+  //Wait for some time
+  repeat(30000) @(negedge clk);
+  //Check if pwr_up is still asserted
+  if(iDUT.pwr_up !== 1) begin
+	$display("Test fails: pwr_up is deasserted when rider is still on");
+	$stop();
+  end
+  //Now rider is knocked off, change both ld_cell to 0
+  ld_cell_rght = 12'h000;
+  ld_cell_lft = 12'h000;
+  //Use parallel compound statement to check if rider_off is asserted
+  fork
+	//Error occurs when en_steer is not asserted
+	begin: timeout7
+		repeat(100000) @(negedge clk);
+		$display("Test fails: rider_off is not asserted after rider is knocked off");
+		$stop();
+	end: timeout7
+	//If rider_off asserted, disable timeout7
+	begin
+		@(posedge iDUT.rider_off);
+		disable timeout7;	//Continue testing
+	end
+  join
+  //Wait for some time
+  repeat(1000) @(negedge clk);
+  //Check if pwr_up is off
+  if(iDUT.pwr_up !== 0) begin
+	$display("Test fails: pwr_up is not deasserted when rider is still on");
+	$stop();
+  end
+  repeat(1000) @(negedge clk);
   $stop();
-  
+
 end
 
 always

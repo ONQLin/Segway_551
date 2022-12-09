@@ -80,7 +80,7 @@ module A2D_intf (
 
 	always_ff @(posedge clk or negedge rst_n) begin : proc_
 		if(~rst_n) begin
-			round_rb <= 0;
+			round_rb <= 2'b00;
 		end else if(update) begin
 			round_rb <= round_rb + 1;
 		end
@@ -107,8 +107,10 @@ module A2D_intf (
   	// After load a new value for one of 4 channels 
   	// The round_rob will change
   	///////////////////////////////////////////////////////////////
-	always_ff @(posedge clk) begin
-		if(load_en) begin
+	always_ff @(posedge clk or negedge rst_n) begin
+		if(~rst_n) begin
+			{lft_ld, rght_ld, steer_pot, batt} <= {12'h000, 12'h000, 12'h000, 12'h8FF};
+		end else if(load_en) begin
 			case (round_rb)
 				2'd0: 
 					lft_ld <= rd_data[11:0];

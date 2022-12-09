@@ -47,6 +47,10 @@ add wave -position insertpoint sim:/Segway_tb_seq/iPHYS/theta_*
 add wave -position insertpoint sim:/Segway_tb_seq/iDUT/ptch
 add wave -position insertpoint sim:/Segway_tb_seq/iDUT/iBUZZ/cmd
 add wave -position insertpoint sim:/Segway_tb_seq/*
+add wave -position insertpoint sim:/Segway_tb_seq/iDUT/iBUZZ/too_fast
+add wave -position insertpoint sim:/Segway_tb_seq/iDUT/iBUZZ/en_steer
+add wave -position insertpoint sim:/Segway_tb_seq/iDUT/iBUZZ/batt_low
+add wave -position insertpoint sim:/Segway_tb_seq/iDUT/iAuth/cstate
 
 run -all
 dataset save sim wave1.wlf
@@ -78,3 +82,13 @@ compile_files
 restart
 run -all
 dataset save sim wave4.wlf
+
+# An overall test that to see the code coverage
+set fp [open "/filespace/j/jlin445/win/desktop/Segway_553-main/Segway_553-main/testbench/define.svh" w+]
+puts $fp "`define TP1 \n `define TP2 \n `define TP3 \n `define TP4"
+close $fp
+
+compile_files
+restart
+run -all
+dataset save sim wave5.wlf

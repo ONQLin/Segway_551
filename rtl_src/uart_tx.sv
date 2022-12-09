@@ -80,9 +80,9 @@ module uart_tx #(
   	///////////////////////////////////////////////////////////////
 	always_ff @(posedge clk or negedge rst_n) begin 	//bit_cnt counts 8bit transfer
 		if(~rst_n) begin
-			bit_cnt <= 0;
+			bit_cnt <= 4'h0;
 		end else if(trmt == 1'b1) begin 				//reset the bit_cnt when new data come
-			bit_cnt <= 0;
+			bit_cnt <= 4'h0;
 		end else if(cstate == TRANSMIT) begin
 			bit_cnt <= bit_cnt + 1;
 		end
@@ -93,11 +93,11 @@ module uart_tx #(
   	///////////////////////////////////////////////////////////////
 	always_ff @(posedge clk or negedge rst_n) begin
 		if(~rst_n) begin
-			baud_cnt <= 0; 
+			baud_cnt <= 12'h000; 
 		end else if(cstate == WAITING)begin 			
 			baud_cnt <= baud_cnt + 1;
 		end else begin   						// only when in wating state, start counting
-			baud_cnt <= 0;
+			baud_cnt <= 12'h000;
 		end
 	end
 
@@ -106,11 +106,11 @@ module uart_tx #(
   	///////////////////////////////////////////////////////////////
 	always_ff @(posedge clk or negedge rst_n) begin 
 		if(~rst_n) begin
-			tx_done <= 0;
+			tx_done <= 1'b0;
 		end else if(trmt) begin
-			tx_done <= 0;
+			tx_done <= 1'b0;
 		end else if(bit_cnt == 10) begin
-			tx_done <= 1;
+			tx_done <= 1'b1;
 		end
 	end
 

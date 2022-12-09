@@ -12,7 +12,7 @@ reg[10:0] cnt;
 // counter for PWM
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		cnt <= 0;
+		cnt <= 11'h0000;
 	end else begin
 		cnt <= cnt + 1;
 	end
@@ -21,15 +21,15 @@ end
 // Generate PWM out according to cnt vs duty
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		PWM_sig <= 0;
+		PWM_sig <= 1'b0;
 	end else if(cnt == 0) begin
-		PWM_sig <= 1;
+		PWM_sig <= 1'b1;
 	end else if(cnt >=duty) begin
-		PWM_sig <= 0;
+		PWM_sig <= 1'b0;
 	end
 end
 
 assign PWM_synch = &cnt;	//PWM finish when counter is full
-assign OVR_I_blank_n = (cnt>255) ? 1 : 0;	//overlook detect at beginning
+assign OVR_I_blank_n = (cnt>255) ? 1'b1 : 1'b0;	//overlook detect at beginning
 
 endmodule : PWM11

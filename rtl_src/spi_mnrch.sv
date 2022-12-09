@@ -32,7 +32,7 @@ state_t cstate, next_state;
 
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		SS_n <= 0;
+		SS_n <= 1'b0;
 	end else begin
 		SS_n <= sclk_en;
 	end
@@ -40,11 +40,11 @@ end
 
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		done <= 0;
+		done <= 1'b0;
 	end else if(set_done) begin // last bit shifted, let done high
-		done <= 1;
+		done <= 1'b1;
 	end else if(wrt) begin // when new transition comes, reset done
-		done <= 0;
+		done <= 1'b0;
 	end
 end
 
@@ -63,9 +63,9 @@ end
 // bit cnt 1-16 use sclk in ff, save power
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		bit_cnt <= 0;
+		bit_cnt <= 5'h00;
 	end else if(init) begin
-		bit_cnt <= 0;
+		bit_cnt <= 5'h00;
 	end else if(shift) begin
 		bit_cnt <= bit_cnt + 1;
 	end 
@@ -82,7 +82,7 @@ end
 // sample the miso in sclk ff, save power
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		miso_smpl <= 0;
+		miso_smpl <= 1'b0;
 	end else if (smpl) begin
 		miso_smpl <= MISO;
 	end
@@ -133,7 +133,7 @@ end
 // wating for the negedge of sclk, front case need load wtdata
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		shift_reg <= 0;
+		shift_reg <= 16'h0000;
 	end else if(wrt) begin
 		shift_reg <= wt_data;
 	end else if(shift) begin

@@ -1,3 +1,6 @@
+`timescale 1ns/1ps
+
+//  /filespace/j/jlin445/ece551/SAED32_lib
 module Segway_tb();
 			
 //// Interconnects to DUT/support defined as type wire /////
@@ -9,6 +12,8 @@ wire piezo,piezo_n;
 wire cmd_sent;
 wire rst_n;					// synchronized global reset
 
+wire[14:0] ptch_test;
+
 ////// Stimulus is declared as type reg ///////
 reg clk, RST_n;
 reg [7:0] cmd;				// command host is sending to DUT
@@ -18,7 +23,7 @@ reg [11:0] ld_cell_lft, ld_cell_rght,steerPot,batt;	// A2D values
 reg OVR_I_lft, OVR_I_rght;
 
 ///// Internal registers for testing purposes??? /////////
-
+assign ptch_test = iDUT.ptch[14:0];
 
 ////////////////////////////////////////////////////////////////
 // Instantiate Physical Model of Segway with Inertial sensor //
@@ -56,22 +61,30 @@ initial begin
   /// Your magic goes here ///
   clk = 0;
   RST_n = 0;
-  repeat(3) @(negedge clk);
+  //input clk, RST_n, INERT_MISO, INERT_INT, A2D_MISO, OVR_I_lft, OVR_I_rght, RX;
+  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd0, 12'd0, 12'd0, 12'h8FF};
+  {OVR_I_lft, OVR_I_rght} = {1'b0,1'b0};
+  force iDUT.ptch_rt = 0;
+
+  repeat(10) @(negedge clk);
   RST_n = 1;
   send_cmd = 0;
+
+  release iDUT.ptch_rt;
+
   repeat(3) @(negedge clk);
   rider_lean = 0;
-	{OVR_I_lft, OVR_I_rght} = {1'b0,1'b0};
 
   // send "g" to segway
   uart_tx_case(8'h67);
   {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h8FF};
   //{ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd0, 12'd0, 12'd0, 12'h0};
   wait(iDUT.pwr_up == 1);
+  $display("pwr up pass!!!!!!");
   repeat(300000) @(posedge clk);
   rider_lean = 16'h0fff;
   repeat(800000) @(posedge clk);
-  rider_lean = 16'd0;
+  rider_lean = 16'h0000;
   repeat(800000) @(posedge clk);
   $stop();
 end

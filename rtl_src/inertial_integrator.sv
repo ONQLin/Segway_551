@@ -27,7 +27,7 @@ assign ptch_acc = {{4{ptch_acc_product[24]}},ptch_acc_product[24:13]};		// tan^-
 
 always_ff @(posedge clk or negedge rst_n) begin
  	if(~rst_n) begin
- 		ptch_int <= 0;
+ 		ptch_int <= 27'h0000000;
  	end else if(vld) begin 													// accumulate the ptch int
  		ptch_int <= (ptch_acc>ptch) ? (ptch_int - {{11{ptch_rt_comp[15]}},ptch_rt_comp} + 1024):
 							(ptch_int - {{11{ptch_rt_comp[15]}},ptch_rt_comp} - 1024);

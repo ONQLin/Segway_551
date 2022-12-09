@@ -39,7 +39,7 @@ set_wire_load_model -name 16000 -library saed32lvt_tt0p85v25c
 ######################
 set_max_transition 0.10 Segway
 
-# set_dont_touch pwr_up
+#set_dont_touch pwr_up
 
 ########################################
 # Now add clock uncertainty & fix hold #
@@ -50,15 +50,17 @@ set_clock_uncertainty 0.125 clk
 # Now kick off synthesis #
 ##########################
 compile -map_effort high 
-report_timing -delay max -nworst 1
+
 set_multicycle_path 2 -setup -from [find pin iNEMO/ptch_*_reg*/CLK]
 set_multicycle_path 2 -setup -from [find pin iNEMO/AZ*_reg*/CLK]
 set_multicycle_path 2 -hold -from [find pin iNEMO/ptch_*_reg*/CLK]
 set_multicycle_path 2 -hold -from [find pin iNEMO/AZ*_reg*/CLK]
+
 #####################
 # Flatten hierarchy #
 #####################
 ungroup -all -flatten
+
 set_fix_hold clk
 
 ###############
@@ -66,11 +68,17 @@ set_fix_hold clk
 ###############
 compile -map_effort high
 
+# set_multicycle_path 2 -setup -from [find pin iNEMO/ptch_*_reg*/CLK]
+# set_multicycle_path 2 -setup -from [find pin iNEMO/AZ*_reg*/CLK]
+# set_multicycle_path 2 -hold -from [find pin iNEMO/ptch_*_reg*/CLK]
+# set_multicycle_path 2 -hold -from [find pin iNEMO/AZ*_reg*/CLK]
+
+# compile
 
 # create reports
-report_timing -delay min -nworst 1
-report_timing -delay max -nworst 1
+report_timing -delay min -nworst 1 > TH_timing.txt
+report_timing -delay max -nworst 1 > SU_timing.txt
 
-report_area
-write -format verilog Segway -output Segway.vg
+report_area > area.txt
+write -format verilog Segway -output Segway.vg 
 

@@ -84,9 +84,9 @@ module inert_intf(clk,rst_n,ptch,ptch_rt,vld,SS_n,SCLK,
   ////////////////////////
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
-	   timer <= 0;
+	   timer <= 16'h0000;
 	 else if (clr_tmr)
-	   timer <= 0;
+	   timer <= 16'h0000;
 	 else
 	   timer <= timer + 1;
 	  

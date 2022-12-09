@@ -1,6 +1,6 @@
 module PID #(
 	parameter P_COEFF = 5'h0C,
-	parameter fast_sim = 0,
+	parameter fast_sim = 1,
 	parameter TMR_INC = (fast_sim) ? 256 : 1,
 	parameter PIPELINED = 1
 )
@@ -38,9 +38,9 @@ module PID #(
 	
 	always_ff@(posedge clk or negedge rst_n) begin
 		if(~rst_n) begin
-			integrator <= 18'd0;
+			integrator <= 18'h00000;
 		end else if(rider_off) begin
-			integrator <= 18'd0;
+			integrator <= 18'h00000;
 		end else if(vld)begin
 			integrator <= (~ov)? I_sum : integrator;
 		end
@@ -49,9 +49,9 @@ module PID #(
 	// count for ss tmr ramping
 	always_ff@(posedge clk or negedge rst_n) begin
 		if(~rst_n) begin
-			ss_cnt <= 27'd0;
+			ss_cnt <= 27'h0000000;
 		end else if(~pwr_up) begin
-			ss_cnt <= 27'd0;
+			ss_cnt <= 27'h0000000;
 		end else begin
 			ss_cnt <= (~(&ss_cnt[26:8])) ? ss_cnt + TMR_INC : ss_cnt;
 		end

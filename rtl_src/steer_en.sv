@@ -29,9 +29,9 @@ module steer_en #(
 	// the 1.34s timer
 	always_ff @(posedge clk or negedge rst_n) begin
 		if(~rst_n) begin
-			cnt1_4 <= 0;
+			cnt1_4 <= '0;
 		end else if(clr_tmr) begin
-			cnt1_4 <= 0;
+			cnt1_4 <= '0;
 		end else begin
 			cnt1_4 <= cnt1_4 + 1;
 		end

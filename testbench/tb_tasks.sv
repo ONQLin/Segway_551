@@ -128,7 +128,7 @@ package tb_tasks;
                               end      
                               piezo_check = 0;
                         end
-                        quiet_piezo_ck();             //scoreboard check for piezo quiet
+                        quiet_piezo_ck(1);             //scoreboard check for piezo quiet
                   join
                   $display("------Step2: watch steer off with random lean!------");
                   rider_config(12'd20, 12'd20, 12'd200, 12'd100);       //all off but batt low 
@@ -308,12 +308,17 @@ package tb_tasks;
                   $display("pltf_ck_proc 1 pass"); 
             endtask : plain_platform_ck
 
-            task quiet_piezo_ck();
+            task quiet_piezo_ck(input random = 1'b0);
                   while(1) begin
                         #40;
                         if(vif.piezo == 1'b1) begin
-                              $error("no state changes now!!!");
-                              $stop;
+                              if(~random) begin
+                                    $error("no state changes now!!!");
+                                    $stop;
+                              end else begin
+                                    $display("!!!it is now too fast in rand!!!");
+                                    break;
+                              end
                         end
                         if(piezo_check == 0)
                               break;

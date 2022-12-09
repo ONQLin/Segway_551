@@ -1,4 +1,4 @@
-module Segway#(parameter fast_sim = 0)(clk,RST_n,INERT_SS_n,INERT_MOSI,INERT_SCLK,
+module Segway#(parameter fast_sim = 1)(clk,RST_n,INERT_SS_n,INERT_MOSI,INERT_SCLK,
               INERT_MISO,INERT_INT,A2D_SS_n,A2D_MOSI,A2D_SCLK,
         A2D_MISO,PWM1_lft,PWM2_lft,PWM1_rght,PWM2_rght,
         OVR_I_lft,OVR_I_rght,piezo_n,piezo,RX);

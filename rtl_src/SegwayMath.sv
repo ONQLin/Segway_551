@@ -16,7 +16,7 @@ module SegwayMath #(
 	output			too_fast
 );
 
-wire[19:0]	PID_ss_i;
+wire signed[19:0]	PID_ss_i;
 logic signed[12:0]	PID_ss;
 wire[11:0]	steer_pot_i;
 wire signed[11:0] steer_pot_res1, steer_pot_res2;

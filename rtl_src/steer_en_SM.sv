@@ -49,12 +49,12 @@ module steer_en_SM(clk,rst_n,tmr_full,sum_gt_min,sum_lt_min,diff_gt_1_4,
   ///////////////////////////////////////////////////////////////
   always_comb begin
       next_state = state;
-      clr_tmr = 1'b0;   //default to avoild latch
+      clr_tmr = 1'b1;   //default to avoild latch
       case (state)
         INIT: begin
             if(sum_gt_min) begin    //ensure that rider is absolutely on (higher than threshold + hysteresis), go to waiting balance
                 next_state = WAITING;
-                clr_tmr = 1'b1;
+                clr_tmr = 1'b0;
             end
         end
         WAITING: begin
@@ -73,7 +73,6 @@ module steer_en_SM(clk,rst_n,tmr_full,sum_gt_min,sum_lt_min,diff_gt_1_4,
                 next_state = INIT;
             end else if(diff_gt_15_16) begin //rider is steppingg off go to waiting for balance(clr counter)
                 next_state = WAITING;
-                clr_tmr = 1'b1;
             end
         end
 

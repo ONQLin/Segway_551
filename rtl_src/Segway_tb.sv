@@ -85,8 +85,40 @@ initial begin
   rider_lean = 16'h0fff;
   repeat(800000) @(posedge clk);
   rider_lean = 16'h0000;
+	
+  // rider off
+  uart_tx_case(8'h73);
+  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd000, 12'd000, 12'd200, 12'h8FF};
+  wait(iDUT.pwr_up == 0);
+  $display("power is off when the rider is off");
+	
+  repeat(10) @(posedge clk);
+ 
+  // rider on but batt is low
+  uart_tx_case(8'h67);	
+  {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h000};
+  if(iDUT.pwr_up != 0) begin
+	$display("if battery is low, power should be off");
+	$stop();
+  end
+  
+  // recover the batt again
+  repeat(10000) @(posedge clk);
+  batt = 12'h8FF;
+  wait(iDUT.pwr_up == 1);
+  $display("pwr is up again");
+
+  // test on too_fast scenario
+  repeat(10000) @(posedge clk);
+  {ld_cell_lft, ld_cell_rght} = {12'hFFF, 12'hFFF};
+  if(iDUT.pwr_up == 0) begin
+	$display("power should be up at too_fast");
+	$stop();
+  end
+  
   repeat(800000) @(posedge clk);
   $stop();
+
 end
 
 always

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////
 //This test bench tests the trasition /////////////
 //of Auth_blk and steer_en.///////////////////////
-module Segway_tb_check_steer_en_SM();
+module Segway_new_tb();
 			
 //// Interconnects to DUT/support defined as type wire /////
 wire SS_n,SCLK,MOSI,MISO,INT;				// to inertial sensor
@@ -82,7 +82,7 @@ initial begin
 	end: timeout1
 	//If sum_lt_min is asserted, disable timeou1
 	begin
-		@(posedge iDUT.iSTR.sum_lt_min);
+		wait(iDUT.iSTR.sum_lt_min == 1'b1);
 		disable timeout1;	//Continue testing
 	end
   join
@@ -108,15 +108,128 @@ initial begin
   //Deassert send_cmd after 1 clk period
   @(negedge clk) send_cmd = 0;
   repeat(100000) @(negedge clk);
-  repeat(50000) @(negedge clk);
-  send_cmd = 1;
-  @(negedge clk) send_cmd = 0;
+  //Pwr_up should not be asserted and state should still be in OFF
+  if(iDUT.pwr_up !== 0) begin
+	$display("Test fails: pwr_up is asserted when ld_cell are both 0");
+	$stop();
+  end
+  if(iDUT.iAuth.cstate !== 2'b00) begin
+	$display("Test fails: Segway should stay in OFF state when ld_cell are both 0");
+	$stop();
+  end
+  //Wait for sometime and change batt, ld_cell
+  repeat(5000) @(negedge clk);
   //Set the batt to be greater than threshold
   batt = 12'h900;
+  //Make the difference of ld_cell greater than 1/4 of the total weight
+  //in order to assert diff_gt_1_4
   ld_cell_lft = 12'h200;
+  ld_cell_rght = 12'h50;
+  //Use parallel compound statement to check if rider_off is deasserted
+  fork
+	//Error occurs when pwr_up is not set to 1
+	begin: timeout2
+		repeat(100000) @(negedge clk);
+		$display("Test fails: rider_off is not deasserted after changing ld_cell");
+		$stop();
+	end: timeout2
+	//If rider_off is deasserted, disable timeout2
+	begin
+		@(negedge iDUT.rider_off);
+		disable timeout2;	//Continue testing
+	end
+  join
+  //Wait for some time and check if pwr_up is asserted
+  repeat(100) @(negedge clk);
+  if(iDUT.pwr_up !== 1) begin
+	$display("Test fails: pwr_up is not asserted after rider_off is deasserted");
+	$stop();
+  end
+  //Also, check is diff_gt_1_4 is asserted and diff_gt_15_16 is not asserted
+  if(iDUT.iSTR.diff_gt_1_4 !== 1) begin
+	$display("Test filas: diff_gt_1_4 is not asserted when lft_ld is 0x200 and rght_ld is 0x50");
+	$stop();
+  end
+  if(iDUT.iSTR.diff_gt_15_16 !== 0) begin
+	$display("Test filas: diff_gt_1_4 is asserted when lft_ld is 0x200 and rght_ld is 0x50");
+	$stop();
+  end
+  //Use parallel compound statement to check if en_steer is asserted when diff_gt_1_4 is 1
+  fork
+	//Error occurs when en_steer set to 1
+	begin: timeout3
+		@(posedge iDUT.en_steer);
+		$display("Test fails: en_steer is asserted when diff_gt_1_4 is 1");
+		$stop();
+	end: timeout3
+	//If en_steer not asserted, disable timeou3
+	begin
+		repeat(50000) @(negedge clk);
+		disable timeout3;	//Continue testing
+	end
+  join
+  //Now change ld_cell_rght to deassert diff_gt_1_4
   ld_cell_rght = 12'h200;
-  repeat(100000) @(negedge clk);
+  //Use parallel compound statement to check if diff_gt_1_4 is deasserted
+	fork
+	//Error occurs when diff_gt_1_4 is not deasserted
+	begin: timeout4
+		repeat(100000) @(negedge clk);
+		$display("Test fails: diff_gt_1_4 is not deasserted after changing ld_cell_rght");
+		$stop();
+	end: timeout4
+	//If diff_gt_1_4 not deasserted, disable timeou4
+	begin
+		@(negedge iDUT.iSTR.diff_gt_1_4);
+		disable timeout4;	//Continue testing
+	end
+  join
+  //Use parallel compound statement to check if en_steer is asserted
+	fork
+	//Error occurs when en_steer is not asserted
+	begin: timeout5
+		repeat(100000) @(negedge clk);
+		$display("Test fails: en_steer is not asserted after diff_gt_1_4 is deasserted");
+		$stop();
+	end: timeout5
+	//If en_steer asserted, disable timeou5
+	begin
+		@(posedge iDUT.en_steer);
+		disable timeout5;	//Continue testing
+	end
+  join
+  //Now change ld_cell to assert diff_gt_15_16
+  ld_cell_rght = 12'h020;
+  ld_cell_lft = 12'h700;
+  //Use parallel compound statement to check if diff_gt_15_16 is asserted
+  fork
+	//Error occurs when en_steer is not asserted
+	begin: timeout6
+		repeat(100000) @(negedge clk);
+		$display("Test fails: diff_gt_15_16 is not asserted after changing ld_cell");
+		$stop();
+	end: timeout6
+	//If diff_gt_15_16 asserted, disable timeout6
+	begin
+		@(posedge iDUT.iSTR.diff_gt_15_16);
+		disable timeout6;	//Continue testing
+	end
+  join
+  //Wait for some time
+  repeat(100) @(negedge clk);
+  //Check if en_steer get deasserted
+  if(iDUT.en_steer !== 0) begin
+	$display("Test fails: en_steer is not deasserted after diff_gt_15_15 is asserted");
+	$stop();
+  end
+  //Check if rider_off get asserted
+  if(iDUT.rider_off !== 0) begin
+	$display("Test fails: rider_off is asserted after diff_gt_15_15 is asserted");
+	$stop();
+  end
+  repeat(10000) @(negedge clk);
   $stop();
+  
 end
 
 always

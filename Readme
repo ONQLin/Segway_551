@@ -2,3 +2,18 @@
 2022/12/02: Segway normal run task on balance ctrl with step rider lean has passed (EX23)
 2022/12/05: Segway synthesis passes. tsu 0.0 th 0.0 area 11491 pipelines added in segwaymath and pid
 2022/12/09: pre post tests done. update the new requirements from instructor
+
+
+A draft guide on file hirarchy and automatic run:
+
+1. Describe the following scripts:
+
+"genFile.sh" is to generate the file lists for the "test.tcl"
+"test.tcl" is to run automatic simulation on modelsim covering 4 tests in the tb_tasks
+“post.tcl” is to run in the post-syn simulation
+
+2. File hirarchy:
+rtl_src contains the src of Segway RTL
+DC script is for dc shell syn
+others are testbenches and code coverage report
+

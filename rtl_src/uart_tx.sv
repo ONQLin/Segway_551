@@ -34,9 +34,6 @@ module uart_tx #(
   	//Because I init the shift reg at beginning, I set WAITING<-->TRANSMIT pair to relieve controling shift.
   	///////////////////////////////////////////////////////////////
 	always_comb begin
-		if(~rst_n) begin
-			next_state = IDLE;
-		end else begin
 			next_state = cstate;
 			case (cstate)
 				IDLE: begin			// when IDLE, TX set high, wating for data, 
@@ -59,7 +56,6 @@ module uart_tx #(
 					next_state = IDLE;
 				end 
 			endcase
-		end
 	end
 
 	///////////////////////////////////////////////////////////////

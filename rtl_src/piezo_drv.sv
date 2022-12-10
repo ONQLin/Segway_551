@@ -135,6 +135,7 @@ always_comb begin
 	rep_clr = 1'b0;
 	rep_en = 1'b1;
 	cmd_clr = 1'b0;
+	frq_sel = 2'b00;
 	case (cstate)
 		IDLE1: begin
 			rep_en = 1'b0;

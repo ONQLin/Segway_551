@@ -49,7 +49,7 @@ Segway iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOSI(MOSI),
 			.piezo_n(piezo_n),.piezo(piezo),.RX(RX_TX));
 
 //// Instantiate UART_tx (mimics command from BLE module) //////
-uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
+UART_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
 
 /////////////////////////////////////
 // Instantiate reset synchronizer //
@@ -75,8 +75,8 @@ initial begin
   repeat(3) @(negedge clk);
   rider_lean = 0;
 
-  // send "g" to segway
-  uart_tx_case(8'h67);
+  // send "G" to segway
+  uart_tx_case("G");
   {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h8FF};
   //{ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd0, 12'd0, 12'd0, 12'h0};
   wait(iDUT.pwr_up == 1);
@@ -87,7 +87,7 @@ initial begin
   rider_lean = 16'h0000;
 	
   // rider off
-  uart_tx_case(8'h73);
+  uart_tx_case("S");
   {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd000, 12'd000, 12'd200, 12'h8FF};
   wait(iDUT.pwr_up == 0);
   $display("power is off when the rider is off");
@@ -95,10 +95,10 @@ initial begin
   repeat(10) @(posedge clk);
  
   // rider on but batt is low
-  uart_tx_case(8'h67);	
+  uart_tx_case("G");
   {ld_cell_lft, ld_cell_rght,steerPot,batt} = {12'd400, 12'd300, 12'd200, 12'h000};
   if(iDUT.pwr_up != 0) begin
-	$display("if battery is low, power should be off");
+	$display("power asserted before the rider load was sampled");
 	$stop();
   end
   

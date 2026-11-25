@@ -3,25 +3,25 @@ module ADC128S_FC(clk,rst_n,SS_n,SCLK,MISO,MOSI,ld_cell_lft,ld_cell_rght,steerPo
   // Model of a National Semi Conductor ADC128S    ||
   // 12-bit A2D converter.  NOTE: this model       ||
   // is used in the "Segway" project and gives a   ||
-  // warning for any channels other than 0,4,5.    ||
+  // warning for any channels other than 0,4,5,6   ||
   // The first two readings will return 0xC00, the ||
   // next two will return 0xBF0, next two after    ||
   //  that return 0xBE...                          ||
   ///////////////////////////////////////////////////
 
   input clk,rst_n;		// clock and active low asynch reset
-  input SS_n;			// active low slave select
+  input SS_n;			// active low secondary select
   input SCLK;			// Serial clock
-  input MOSI;			// serial data in from master
+  input MOSI;			// serial data in from main
   input [11:0] ld_cell_lft;		// reading you want for ld_cell_lft
   input [11:0] ld_cell_rght;	// reading you want for ld_cell_rght
   input [11:0] steerPot;		// steering potentiometer input
   input [11:0] batt;			// reading you want for batt
   
-  output MISO;			// serial data out to master
+  output MISO;			// serial data out to main
   
   wire [15:0] A2D_data,cmd;
-  wire rdy_rise;
+  wire rdy, rdy_rise;
 	
   typedef enum reg {FIRST,SECOND} state_t;
   

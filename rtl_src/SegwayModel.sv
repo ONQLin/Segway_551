@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
                    PWM1_rght,PWM2_rght,rider_lean);
   //////////////////////////////////////////////////
@@ -12,21 +13,21 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 
   input clk;				// same 50MHz clock you give to Segway.v
   input RST_n;				// unsynchronized raw reset input
-  input SS_n;				// active low slave select to inertial sensor
+  input SS_n;				// active low secondary select to inertial sensor
   input SCLK;				// Serial clock
-  input MOSI;				// serial data in from master
+  input MOSI;				// serial data in from main
   input PWM1_lft,PWM2_lft;	// left motor PWM controls
   input PWM1_rght,PWM2_rght; // right motor PWM controls
   input signed [15:0] rider_lean;		// represents rider's forward/backward lean
 										// Don't exceed 0x1FFF postitive or 0xE000 negative
 
   
-  output MISO;				// serial data out to master
+  output MISO;				// serial data out to main
   output reg INT;			// interrupt output, goes high when inertial sensor has data
   
-  localparam MIN_DUTY = 15'h038E;		// defines zone of duties that give little torque
-  localparam TORQUE_GAIN = 4'hE;		// gain is (14/2)X what it is in the dead zone
-  localparam FRICTION_TORQUE = 14'h0380;	// torque in wheels needed to overcome friction (start rolling)
+  localparam MIN_DUTY = 15'h00A7;		// defines zone of duties that give little torque
+  localparam TORQUE_GAIN = 6'h1F;		// gain is (14/2)X what it is in the dead zone
+  localparam FRICTION_TORQUE = 14'h0190;	// torque in wheels needed to overcome friction (start rolling)
   localparam PTCH_RT_OFFSET = 16'h0050;		// offset of this inertial sensor for pitch rate
   localparam AZ_OFFSET = 16'h00A0;
   
@@ -52,8 +53,8 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
   ////////////////////////////////////////////////
   reg PWM1_rght_ff1, PWM2_rght_ff1;					// Used for edge detection of PWM signals
   reg PWM1_lft_ff1, PWM2_lft_ff1;					// Used for edge detection of PWM signals
-  reg [10:0] lft_rev_cnt,lft_frwrd_cnt;				// Used to measure PWM duty cycle
-  reg [10:0] rght_rev_cnt,rght_frwrd_cnt;			// Used to measure PWM duty cycle
+  reg [10:0] lft1_cnt,lft2_cnt;				// Used to measure PWM duty cycle
+  reg [10:0] rght1_cnt,rght2_cnt;			// Used to measure PWM duty cycle
   reg signed [11:0] lft_duty;						// signed representation of drive to left motor
   reg signed [11:0] rght_duty;						// signed representation of drive to right motor
   reg rst_n, rst_synch;								// used to synchronize reset
@@ -138,7 +139,7 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
   ////////////////////////////////////////////////
   always_ff @(posedge internal_clk, negedge POR_n)
     if (!POR_n)
-	  update_period <= 11'h0000;
+	  update_period <= 11'h000;
 	else if (NEMO_setup)
 	  update_period <= update_period + 1;
 	
@@ -222,38 +223,38 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 	  any_are_one_ff1 <= any_are_one;
 	end
 	
-  assign lft_rise = (PWM1_lft & ~PWM1_lft_ff1) | (PWM2_lft & ~PWM2_lft_ff1);
-  assign rght_rise = (PWM1_rght & ~PWM1_rght_ff1) | (PWM2_rght & ~PWM2_rght_ff1);
+  assign lft_rise = (PWM1_lft & ~PWM1_lft_ff1);
+  assign rght_rise = (PWM1_rght & ~PWM1_rght_ff1);
 	
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n) begin
-	  lft_frwrd_cnt <= 11'h000;
-	  lft_rev_cnt <= 11'h000;
+	  lft1_cnt <= 11'h000;
+	  lft2_cnt <= 11'h000;
 	end else if (lft_rise) begin
-	  lft_frwrd_cnt <= 11'h001;
-	  lft_rev_cnt <= 11'h001;
+	  lft1_cnt <= 11'h001;
+	  lft2_cnt <= 11'h001;
 	end else begin
-	  lft_frwrd_cnt <= (PWM1_lft) ? lft_frwrd_cnt + 1 : lft_frwrd_cnt;
-	  lft_rev_cnt <= (PWM2_lft) ? lft_rev_cnt + 1 : lft_rev_cnt;
+	  lft1_cnt <= (PWM1_lft) ? lft1_cnt + 1 : lft1_cnt;
+	  lft2_cnt <= (PWM2_lft) ? lft2_cnt + 1 : lft2_cnt;
 	end
 	
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n) begin
-	  rght_frwrd_cnt <= 11'h000;
-	  rght_rev_cnt <= 11'h000;
+	  rght1_cnt <= 11'h000;
+	  rght2_cnt <= 11'h000;
 	end else if (rght_rise) begin
-	  rght_frwrd_cnt <= 11'h001;
-	  rght_rev_cnt <= 11'h001;
+	  rght1_cnt <= 11'h001;
+	  rght2_cnt <= 11'h001;
 	end else begin
-	  rght_frwrd_cnt <= (PWM1_rght) ? rght_frwrd_cnt + 1 : rght_frwrd_cnt;
-	  rght_rev_cnt <= (PWM2_rght) ? rght_rev_cnt + 1 : rght_rev_cnt;
+	  rght1_cnt <= (PWM1_rght) ? rght1_cnt + 1 : rght1_cnt;
+	  rght2_cnt <= (PWM2_rght) ? rght2_cnt + 1 : rght2_cnt;
 	end
 	
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
-	  time_since_rise_lft <= 12'h0000;
+	  time_since_rise_lft <= 12'h000;
 	else if (lft_rise)
-	  time_since_rise_lft <= 12'h0000;
+	  time_since_rise_lft <= 12'h000;
 	else
 	  time_since_rise_lft <= time_since_rise_lft + 1;
 	  
@@ -269,12 +270,12 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
     if (!rst_n)
 	  time_since_calc <= 12'h000;
 	else if (calc_physics || time_since_calc[11])
-	  time_since_calc <= 12'h000;
+	  time_since_calc <= 12'h001;
 	else
 	  time_since_calc <= time_since_calc + 1;	  
 	  
-  assign lft_fall = (~PWM1_lft & PWM1_lft_ff1) | (~PWM2_lft & PWM2_lft_ff1);
-  assign rght_fall = (~PWM1_rght & PWM1_rght_ff1) | (~PWM2_rght & PWM2_rght_ff1);
+  assign lft_fall = (~PWM2_lft & PWM2_lft_ff1);
+  assign rght_fall = (~PWM2_rght & PWM2_rght_ff1);
   assign last_fall = ~any_are_one & any_are_one_ff1;
   
   always_ff @(posedge clk, negedge rst_n)
@@ -283,7 +284,7 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 	else if (time_since_rise_lft[11])
 	  lft_duty <= 1'b0;
 	else if (lft_fall)
-	  lft_duty <= ((|lft_frwrd_cnt)===1'bx) ? 12'h000 : {1'b0,lft_frwrd_cnt} -  {1'b0,lft_rev_cnt};
+	  lft_duty <= ((|lft1_cnt)===1'bx) ? 12'h000 : {1'b0,lft1_cnt} -  {1'b0,lft2_cnt};
 
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
@@ -291,7 +292,7 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 	else if (time_since_rise_rght[11])
 	  rght_duty <= 1'b0;
 	else if (rght_fall)
-	  rght_duty <= ((|lft_frwrd_cnt)===1'bx) ? 12'h000 : {1'b0,rght_frwrd_cnt} - {1'b0,rght_rev_cnt};	 
+	  rght_duty <= ((|rght1_cnt)===1'bx) ? 12'h000 : {1'b0,rght1_cnt} - {1'b0,rght2_cnt};
 
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
@@ -374,8 +375,8 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 	if (duty_abs>MIN_DUTY)
 	  torque_abs = TORQUE_GAIN*(duty_abs-MIN_DUTY) + MIN_DUTY;
 	else
-	  torque_abs = duty_abs;
-	  //torque_abs = {duty_abs[10:0],1'b0};		// gain in dead zone is 2.
+	  //torque_abs = duty_abs;
+	  torque_abs = {duty_abs[11:0],3'b000};		// gain in dead zone is 8.
 
 	torque = (duty[11])? -torque_abs[15:1] : torque_abs[15:1];
   endfunction
@@ -388,16 +389,16 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 	
 	omega_abs = (omega1[15]) ? ~omega1 : omega1;
 	
-	friction = (omega_abs>14'h0400) ? {{10{omega1[15]}},omega1[15:10]} :
-	           (omega1[15]) ? 16'hFFFF :
-               (|omega1) ? 16'h0001 : 16'h0000;
+	friction = (omega_abs>14'h0300) ? {{10{omega1[15]}},omega1[15:10]} :
+	           (omega1[15]) ? 16'hFFF8 :
+               (|omega1) ? 16'h0008 : 16'h0000;
 	
 	torque_abs = (torque[15]) ? ~torque : torque;
 	
 	if ((torque_abs<FRICTION_TORQUE) && (omega_abs<16'h0030))
 	  omega = 16'h0000;
 	else
-	  omega = omega1 + {{6{torque[15]}},torque[15:6]} - friction;
+	  omega = omega1 + {{7{torque[15]}},torque[15:7]} - friction;
   endfunction
   
   function signed [19:0] theta (input signed [19:0] theta1, input signed [15:0] omega);
@@ -413,9 +414,9 @@ module SegwayModel(clk,RST_n,SS_n,SCLK,MISO,MOSI,INT,PWM1_lft,PWM2_lft,
 	
 	omega_abs = (omega1[15]) ? ~omega1 : omega1;
 	
-	friction = (omega_abs>14'h0400) ? {{10{omega1[15]}},omega1[15:10]} :
-	           (omega1[15]) ? 16'hFFFF :
-               (|omega1) ? 16'h0001 : 16'h0000;
+	friction = (omega_abs>14'h0300) ? {{10{omega1[15]}},omega1[15:10]} :
+	           (omega1[15]) ? 16'hFFFC :
+               (|omega1) ? 16'h0004 : 16'h0000;
 			   
 	omega_plat = omega1 + {{3{torque[15]}},torque[15:3]} - friction;
 	  

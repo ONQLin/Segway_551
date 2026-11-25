@@ -1,14 +1,13 @@
+`timescale 1ns/1ps
 package tb_tasks;
       // https://stackoverflow.com/questions/67922669/what-causes-interface-resolution-compilation-error-when-working-with-classes-a
       class Seg_drv;
 
             virtual Seg_ports vif; // virtual interface link to segway
-            reg uclk;
             reg piezo_check, platform_check;
 
             function new( virtual Seg_ports s);
                   vif = s; // initialize the virtual interface 
-                  uclk = 0;
                   {piezo_check, platform_check} = {1'b0,1'b0};
             endfunction
 
@@ -32,9 +31,9 @@ package tb_tasks;
                   ////// Stage 1: Testing Auth with rider off/on | cover iAuth A2D iBUZZ iSTR... ///////
                   fork
                         begin                         // testor meanwhile check some states                                          
-                              // send "g" to power on the device
+                              // send "G" to power on the device
                               repeat(4) @(posedge vif.a2d_vld);
-                              uart_tx_case(.clk(clk), .tx_in(8'h67));
+                              uart_tx_case(.clk(clk), .tx_in("G"));
                               if(vif.pwr_up == 1'b0) begin
                                     $display("------Step1: rider off pwr not on pass!------"); 
                               end else begin
@@ -50,8 +49,8 @@ package tb_tasks;
                               end
                               rider_config(12'd0, 12'd0, 12'd0);
                               repeat(4) @(posedge vif.a2d_vld);
-                              // send "s"
-                              uart_tx_case(.clk(clk), .tx_in(8'h73));
+                              // send "S"
+                              uart_tx_case(.clk(clk), .tx_in("S"));
                               if(vif.pwr_up == 1'b0) begin
                                     $display("------Step2: rider off pwr off pass!------");
                               end else begin
@@ -66,12 +65,12 @@ package tb_tasks;
                   // rider on and start steer
                   rider_config(12'd400, 12'd300, 12'd200);
                   repeat(4) @(posedge vif.a2d_vld);
-                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  uart_tx_case(.clk(clk), .tx_in("G"));
                   if(vif.pwr_up == 1'b0) begin
                         $error("one should power up");
                         $stop;
                   end
-                  uart_tx_case(.clk(clk), .tx_in(8'h73));
+                  uart_tx_case(.clk(clk), .tx_in("S"));
                   if(vif.pwr_up == 1'b0) begin
                         $error("one should power up");
                         $stop;
@@ -102,7 +101,7 @@ package tb_tasks;
             // whether balance is controled or not//
             ////////////////////////////////////////
             task seg_test_seq2(ref clk);
-                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  uart_tx_case(.clk(clk), .tx_in("G"));
                   rider_config(12'd300, 12'd400, 12'd200);              //rider on and steer en      
                   repeat(4) @(posedge vif.a2d_vld);
                   piezo_check = 1;
@@ -156,7 +155,7 @@ package tb_tasks;
                   vif.rider_lean = 16'h0000;
                   vif.OVR_I_lft = OVR[1];
                   vif.OVR_I_rght = OVR[0];
-                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  uart_tx_case(.clk(clk), .tx_in("G"));
                   if(vif.pwr_up == 1'b0) begin
                         $error("one should power up");
                         $stop;
@@ -196,7 +195,7 @@ package tb_tasks;
                   vif.rider_lean = 16'h0000;
                   vif.OVR_I_lft = OVR[1];
                   vif.OVR_I_rght = OVR[0];
-                  uart_tx_case(.clk(clk), .tx_in(8'h67));
+                  uart_tx_case(.clk(clk), .tx_in("G"));
                   if(vif.pwr_up == 1'b0) begin
                         $error("one should power up");
                         $stop;
@@ -232,7 +231,7 @@ package tb_tasks;
                   vif.send_cmd = 0;		// 1clk trmt, to capture and set txdata;
                   wait(vif.cmd_sent == 1'b1); 	// serial data done, otherwise uart_tx is not sent
                   $display("tx data, %h, is sent",tx_in);
-                  wait_bauds(12);   
+                  wait_bauds(12, clk);
             endtask
 
             function void rider_config(input[11:0] lcl, input[11:0] lcr, input[11:0] sp, input[11:0] bt=12'h8FF);
@@ -244,8 +243,8 @@ package tb_tasks;
                   vif.rider_lean = $urandom_range(Lowl, Highl);
             endfunction
 
-            task wait_bauds(input[15:0] len);
-                  repeat(len*2) #30000 uclk = ~uclk;
+            task wait_bauds(input[15:0] len, ref clk);
+                  repeat(len * 5208) @(posedge clk);  // 50 MHz / 9600 baud
             endtask
 
 

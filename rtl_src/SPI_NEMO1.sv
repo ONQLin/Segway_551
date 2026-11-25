@@ -1,4 +1,5 @@
-module SPI_iNEMO1(SS_n,SCLK,MISO,MOSI,INT);
+`timescale 1ns/1ps
+module SPI_NEMO1(SS_n,SCLK,MISO,MOSI,INT);
   /////////////////////////////////////////////////////////
   // Model of a ST iNEMO 6-axis inertial device         //
   // Inertial data comes from readmemh of inertial.txt //
@@ -51,13 +52,6 @@ module SPI_iNEMO1(SS_n,SCLK,MISO,MOSI,INT);
   
   wire NEMO_setup;		// once INT register setup it will start the measurement cycle of inertial sensor									// triggers when all ESC's have had neg edge
   
-  always_ff @(posedge internal_clk, negedge POR_n)
-    if (!POR_n)
-	  update_period <= 12'h000;
-	else if (NEMO_setup)
-	  update_period <= update_period + 1;
-	  
-	  
   //// Infer main SPI shift register ////
   always_ff @(negedge SCLK, negedge POR_n)
     if (!POR_n)
@@ -103,7 +97,7 @@ module SPI_iNEMO1(SS_n,SCLK,MISO,MOSI,INT);
   ////////////////////////////////////////////////
   always_ff @(posedge internal_clk, negedge POR_n)
     if (!POR_n)
-	  update_period <= 13'h0000;
+	  update_period <= 12'h000;
 	else if (NEMO_setup)
 	  update_period <= update_period + 1;
 	

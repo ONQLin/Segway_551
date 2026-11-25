@@ -1,220 +1,86 @@
-module piezo_drv #(
-	parameter fast_sim = 1,
-	parameter div_note = (fast_sim) ? 17'h02000 : 1,	// divider for fast_sim
-	parameter note_len_1 = 26'h2000000/div_note, 	// last G7 1/2 note
-	parameter note_len_1_4 = 24'h800000/div_note, 	// 123 G6 C7 E7 1/4 note
-	parameter note_len_1_8 = 23'h400000/div_note,	// last 2nd E7 1/8 note
-	parameter note_len_3_8 = (24'h800000+23'h400000)/div_note,	//4th G7 3/8 note
-
-	parameter div_frq = (fast_sim) ? 1000 : 1,	//divider for fast_sim	
-	parameter G6_frq = 31888/div_frq, 			//divider for G6 frq
-	parameter C7_frq = 23889/div_frq,			//divider for C7 frq
-	parameter E7_frq = 18961/div_frq,           //divider for E7 frq
-	parameter G7_frq = 15944/div_frq,			//divider for G7 frq
-
-	parameter div_rep = (fast_sim) ? 100_00 : 1,
-	parameter repeat_len = 3*50_000_000/div_rep,
-	parameter len_notcnt = (~fast_sim) ? 26 : 13,
-	parameter len_frqcnt = (~fast_sim) ? 14 : 5,
-	parameter len_repcnt = (~fast_sim) ? 27 : 14
-)
-(
-	input clk,    // Clock
-	input rst_n,  // Asynchronous reset active low
-	input en_steer,
-	input too_fast,
-	input batt_low,
-
-	output reg piezo,
-	output piezo_n
+module piezo_drv #(parameter fast_sim = 1) (
+    input  logic clk, rst_n, en_steer, too_fast, batt_low,
+    output logic piezo, piezo_n
 );
+    localparam SCALE = fast_sim ? 64 : 1;
+    localparam QUARTER = (1 << 23) / SCALE;
+    localparam REPEAT_CLKS = 150_000_000 / SCALE;
+    // Rounded clock periods for a 50 MHz clock, including fast_sim scaling.
+    localparam G6 = (50_000_000 + 1568*SCALE/2) / (1568*SCALE);
+    localparam C7 = (50_000_000 + 2093*SCALE/2) / (2093*SCALE);
+    localparam E7 = (50_000_000 + 2637*SCALE/2) / (2637*SCALE);
+    localparam G7 = (50_000_000 + 3136*SCALE/2) / (3136*SCALE);
 
-reg[len_notcnt:0] note_cnt;
-reg[len_frqcnt:0] frq_cnt;
-reg[len_repcnt:0] rep_cnt;
+    typedef enum logic [1:0] {IDLE, STEER, FAST, BATT} mode_t;
+    mode_t cmd, requested;
+    logic [2:0] note_idx;
+    logic waiting;
+    logic [$clog2(2*QUARTER)-1:0] note_cnt;
+    logic [$clog2(2*QUARTER):0] duration;
+    logic [$clog2(G6)-1:0] phase, period_clks;
+    logic [$clog2(REPEAT_CLKS)-1:0] repeat_cnt;
 
-logic[14:0] H_frq;
+    always_comb begin
+        if (too_fast) requested = FAST;
+        else if (batt_low) requested = BATT;
+        else if (en_steer) requested = STEER;
+        else requested = IDLE;
 
-reg[1:0] frq_sel;
-reg frq_load, note_clr, note_en, rep_en, rep_clr, cmd_clr; // signals to control counters
+        case (note_idx)
+            0: period_clks = G6;
+            1: period_clks = C7;
+            2, 4: period_clks = E7;
+            default: period_clks = G7;
+        endcase
+        case (note_idx)
+            3: duration = QUARTER + QUARTER/2;
+            4: duration = QUARTER/2;
+            5: duration = 2*QUARTER;
+            default: duration = QUARTER;
+        endcase
+    end
 
-typedef enum reg[1:0] {IDLE, STEER, FAST, BATT} cmd_t;
-cmd_t cmd;
+    wire note_done = (note_cnt == duration - 1);
+    wire last_note = (cmd == BATT) ? (note_idx == 0) : (note_idx == 5);
+    wire restart = (cmd == IDLE) || (requested == FAST && cmd != FAST)
+                || (waiting && (repeat_cnt == REPEAT_CLKS-1 || requested != cmd))
+                || (cmd == FAST && note_idx == 2 && note_done);
 
-typedef enum reg[2:0] {IDLE1, NOTE1, NOTE2, NOTE3, NOTE4, NOTE5, NOTE6, WAITING} piezo_state;
-piezo_state cstate, nstate;
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            cmd <= IDLE;
+            waiting <= 1'b0;
+            note_idx <= '0;
+            repeat_cnt <= '0;
+            note_cnt <= '0;
+            phase <= '0;
+        end else if (requested == IDLE || restart) begin
+            cmd <= requested;
+            waiting <= 1'b0;
+            note_idx <= (requested == BATT) ? 3'd5 : 3'd0;
+            repeat_cnt <= '0;
+            note_cnt <= '0;
+            phase <= '0;
+        end else begin
+            repeat_cnt <= repeat_cnt + 1'b1;
+            if (!waiting) begin
+                if (note_done) begin
+                    phase <= '0;
+                    note_cnt <= '0;
+                    if (last_note)
+                        waiting <= 1'b1;
+                    else if (cmd == BATT)
+                        note_idx <= note_idx - 1'b1;
+                    else
+                        note_idx <= note_idx + 1'b1;
+                end else begin
+                    note_cnt <= note_cnt + 1'b1;
+                    phase <= (phase == period_clks-1) ? '0 : phase + 1'b1;
+                end
+            end
+        end
+    end
 
-always_comb begin
-	case (frq_sel)
-		2'b00: H_frq = G6_frq;
-		2'b01: H_frq = C7_frq;
-		2'b10: H_frq = E7_frq;
-		2'b11: H_frq = G7_frq;
-		default : H_frq = G6_frq;
-	endcase
-end
-
-//note duration counter check with note_len in diif states
-always_ff @(posedge clk or negedge rst_n) begin
-	if(~rst_n) begin
-		note_cnt <= '0;
-	end else if(note_clr) begin
-		note_cnt <= '0;
-	end else if(note_en) begin
-		note_cnt <= note_cnt + 1;
-	end
-end
-
-//piezo freq counter check with diff note freq in 
-always_ff @(posedge clk or negedge rst_n) begin
-	if(~rst_n) begin
-		frq_cnt <= '0;
-	end else if(note_clr) begin
-		frq_cnt <= '0;
-	end else if(frq_load) begin
-		frq_cnt <= '0;
-	end else if(note_en) begin
-		frq_cnt <= frq_cnt + 1;
-	end
-end
-
-//3s repeat counter
-always_ff @(posedge clk or negedge rst_n) begin
-	if(~rst_n) begin
-		rep_cnt <= '0;
-	end else if(rep_clr) begin
-		rep_cnt <= '0;
-	end else if(rep_en) begin
-		rep_cnt <= rep_cnt + 1;
-	end
-end
-
-localparam duty_num = (fast_sim) ? 10 : 10000;
-always_ff @(posedge clk or negedge rst_n) begin
-	if(~rst_n) begin
-		piezo <= 1'b0;
-		frq_load <= 1'b0;
-	end else if(frq_cnt == H_frq - duty_num) begin
-		piezo <= 1'b1;
-	end else if(frq_cnt == H_frq) begin
-		piezo <= 1'b0;
-		frq_load <= 1'b1;
-	end else begin
-		piezo <= (note_en) ? piezo : 0;
-		frq_load <= 1'b0;
-	end
-end
-
-// according to the state of cmd, the piezo sm will carry out different loops
-always_ff @(posedge clk or negedge rst_n) begin
-	if(~rst_n) begin
-		cmd <= IDLE;
-	end else if(too_fast) begin
-		cmd <= FAST;
-	end else if(batt_low) begin
-		cmd <= BATT;
-	end else if(en_steer) begin
-		cmd <= STEER;
-	end else if(cmd_clr) begin
-		cmd <= IDLE;
-	end
-end
-
-always_ff @(posedge clk or negedge rst_n) begin
-	if(~rst_n) begin
-		cstate <= IDLE1;
-	end else begin
-		cstate <= nstate;
-	end
-end
-
-always_comb begin
-	nstate = cstate;
-	note_clr = 1'b0;
-	note_en = 1'b1;
-	rep_clr = 1'b0;
-	rep_en = 1'b1;
-	cmd_clr = 1'b0;
-	frq_sel = 2'b00;
-	case (cstate)
-		IDLE1: begin
-			rep_en = 1'b0;
-			note_en = 1'b0;
-			cmd_clr = 1'b1;
-			rep_clr = 1'b1;
-			if(cmd == FAST) begin
-				nstate = NOTE1;	
-				note_clr = 1'b1;
-			end else if(cmd == BATT) begin
-				nstate = NOTE6;
-				note_clr = 1'b1;
-			end else if(cmd == STEER) begin
-				nstate = NOTE1;
-				note_clr = 1'b1;
-			end
-		end
-
-		NOTE1: begin
-			frq_sel = 2'b00;
-			if(note_cnt == note_len_1_4) begin
-				nstate = (cmd == BATT) ? WAITING : NOTE2;
-				note_clr = 1'b1;
-			end
-		end
-
-		NOTE2: begin
-			frq_sel = 2'b01;
-			if(note_cnt == note_len_1_4) begin
-				nstate = (cmd == BATT) ? NOTE1 : NOTE3;
-				note_clr = 1'b1;
-			end
-		end
-
-		NOTE3: begin
-			frq_sel = 2'b10;
-			if(note_cnt == note_len_1_4) begin
-				nstate = (cmd == FAST) ? IDLE1:((cmd == BATT) ? NOTE2 : NOTE4);
-				note_clr = 1'b1;
-			end
-		end
-
-		NOTE4: begin
-			frq_sel = 2'b11;
-			if(note_cnt == note_len_3_8) begin
-				nstate = (cmd == FAST) ? IDLE1:((cmd == BATT) ? NOTE3 : NOTE5);
-				note_clr = 1'b1;
-			end
-		end
-
-		NOTE5: begin
-			frq_sel = 2'b10;
-			if(note_cnt == note_len_1_8) begin
-				nstate = (cmd == FAST) ? IDLE1:((cmd == BATT) ? NOTE4 : NOTE6);
-				note_clr = 1'b1;
-			end
-		end
-
-		NOTE6: begin
-			frq_sel = 2'b11;
-			if(note_cnt == note_len_1) begin
-				nstate = (cmd == FAST) ? IDLE1:((cmd == BATT) ? NOTE5 : WAITING);
-				note_clr = 1'b1;
-			end
-		end
-
-		WAITING: begin
-			note_en = 1'b0;
-			cmd_clr = 1'b1;
-			if((rep_cnt == repeat_len) || (cmd == FAST)) begin
-				nstate = IDLE1;
-			end
-		end
-
-		default : nstate = IDLE1;
-	endcase
-end
-
-assign piezo_n = ~piezo;
-
-
-endmodule : piezo_drv
+    assign piezo = (cmd != IDLE) && !waiting && (phase < (period_clks >> 1));
+    assign piezo_n = ~piezo;
+endmodule

@@ -1,4 +1,9 @@
-module A2D_intf (
+module A2D_intf #(
+    // ADC128S_FC registers its conversion after observing SS_n rise. Allow
+    // that value to settle before the read. Set to 0 for the one-clock gap
+    // in the component exercise with a converter ready at frame end.
+    parameter bit EXTRA_READ_SETUP = 1'b1
+) (
 	input clk,    	// Clock
 	input rst_n, 	// Asynchronous reset active low
 	input nxt,		// Initiates A2D conversion on next measurand
@@ -23,7 +28,6 @@ module A2D_intf (
 
 	reg wrt, update, load_en;
 
-	//reg[3:0] cnt;
 	reg[1:0] round_rb;
 
 	always_ff @(posedge clk or negedge rst_n) begin
@@ -53,7 +57,12 @@ module A2D_intf (
 
 			WR: begin
 				if(done) begin
-					nstate = RCV;
+					if (EXTRA_READ_SETUP)
+						nstate = RCV;
+					else begin
+						wrt = 1;
+						nstate = RD;
+					end
 				end
 			end
 
@@ -66,10 +75,8 @@ module A2D_intf (
 			end
 
 			RCV: begin
-				//if(&cnt) begin
-					nstate = RD;
-					wrt = 1;
-				//end
+				nstate = RD;
+				wrt = 1;
 			end
 
 			default : begin
@@ -128,7 +135,7 @@ module A2D_intf (
   	// SPI_m: can prepare the wt_data several cycles after the assertion 
   	// of the wrt. 1 done- 1 transaction
   	///////////////////////////////////////////////////////////////
-	spi_mnrch SPI_M(
+	SPI_main SPI_M(
 		.clk		(clk),    // Clock
 		.rst_n		(rst_n),  // Asynchronous reset active low
 		.wrt		(wrt), 	  // A high for 1 clock period would initiate a SPI transaction

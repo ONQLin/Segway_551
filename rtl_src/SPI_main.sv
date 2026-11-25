@@ -1,4 +1,4 @@
-module spi_mnrch (
+module SPI_main (
 	input clk,    // Clock
 	input rst_n,  // Asynchronous reset active low
 	
@@ -32,7 +32,7 @@ state_t cstate, next_state;
 
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
-		SS_n <= 1'b0;
+		SS_n <= 1'b1;
 	end else begin
 		SS_n <= sclk_en;
 	end
@@ -43,7 +43,7 @@ always_ff @(posedge clk or negedge rst_n) begin
 		done <= 1'b0;
 	end else if(set_done) begin // last bit shifted, let done high
 		done <= 1'b1;
-	end else if(wrt) begin // when new transition comes, reset done
+	end else if(wrt && cstate == IDLE) begin // when new transition comes, reset done
 		done <= 1'b0;
 	end
 end
@@ -134,7 +134,7 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
 	if(~rst_n) begin
 		shift_reg <= 16'h0000;
-	end else if(wrt) begin
+	end else if(wrt && cstate == IDLE) begin
 		shift_reg <= wt_data;
 	end else if(shift) begin
 		shift_reg <= (bit_cnt == 0) ? shift_reg : {shift_reg[14:0],miso_smpl};
@@ -147,4 +147,4 @@ assign rd_data = shift_reg;
 
 
 
-endmodule : spi_mnrch
+endmodule : SPI_main

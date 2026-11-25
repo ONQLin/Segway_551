@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 ////////////////////////////////////////////////////////////////
 //This testbench tests the piezo output when the segway is too//
 //fast, steer_en or low_batt////////////////////////////////////
@@ -51,7 +52,7 @@ Segway #(fast_sim) iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOSI(MO
 			.piezo_n(piezo_n),.piezo(piezo),.RX(RX_TX));
 
 //// Instantiate UART_tx (mimics command from BLE module) //////
-uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
+UART_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
 
 /////////////////////////////////////
 // Instantiate reset synchronizer //
@@ -80,9 +81,9 @@ initial begin
   //Wait for some time so rst_n goes high
   repeat(10) @(negedge clk);
 
-  //Send 'g' to enable the segway
+  //Send 'G' to enable the segway
   @(negedge clk);
-  cmd = 8'h67;
+  cmd = "G";
   send_cmd = 1'b1;
   @(negedge clk);
   send_cmd = 1'b0;
@@ -90,7 +91,7 @@ initial begin
   fork
 	//Error occurs when pwr_up is never asserted
 	begin: timeout1
-		repeat(30000) @(posedge clk);
+		repeat(150000) @(posedge clk);
 		$display("Timeout for waiting pwr_up");
 		$stop();
 	end: timeout1

@@ -45,9 +45,9 @@ module inert_intf(clk,rst_n,ptch,ptch_rt,vld,SS_n,SCLK,
   state_t state,nxt_state;
   
   ///////////////////////////////////////////////////////////
-  // Instantiate SPI master for Inertial Sensor interface //
+  // Instantiate SPI main for Inertial Sensor interface   //
   /////////////////////////////////////////////////////////
-  spi_mnrch iSPI(.clk(clk),.rst_n(rst_n),.SS_n(SS_n),.SCLK(SCLK),
+  SPI_main iSPI(.clk(clk),.rst_n(rst_n),.SS_n(SS_n),.SCLK(SCLK),
                   .MISO(MISO),.MOSI(MOSI),.wrt(wrt),.done(done),
 				  .rd_data(inert_data),.wt_data(cmd));
 				  
@@ -84,9 +84,9 @@ module inert_intf(clk,rst_n,ptch,ptch_rt,vld,SS_n,SCLK,
   ////////////////////////
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n)
-	   timer <= 16'h0000;
+	   timer <= 0;
 	 else if (clr_tmr)
-	   timer <= 16'h0000;
+	   timer <= 0;
 	 else
 	   timer <= timer + 1;
 	  

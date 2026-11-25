@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 
 // stimulus and some output/internal signals are included in intf
 // make convenient to interact with func and task in package
@@ -70,7 +71,7 @@ Segway iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOSI(MOSI),
 			.piezo_n(piezo_n),.piezo(Seg_intf.piezo),.RX(RX_TX));
 
 //// Instantiate UART_tx (mimics command from BLE module) //////
-uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(Seg_intf.send_cmd),.tx_data(Seg_intf.cmd),.tx_done(Seg_intf.cmd_sent));
+UART_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(Seg_intf.send_cmd),.tx_data(Seg_intf.cmd),.tx_done(Seg_intf.cmd_sent));
 
 /////////////////////////////////////
 // Instantiate reset synchronizer //

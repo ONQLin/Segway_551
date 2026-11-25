@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 ////////////////////////////////////////////////////
 //This test bench tests the trasition /////////////
 //of Auth_blk and steer_en.///////////////////////
@@ -47,7 +48,7 @@ Segway #(.fast_sim(1)) iDUT(.clk(clk),.RST_n(RST_n),.INERT_SS_n(SS_n),.INERT_MOS
 			.piezo_n(piezo_n),.piezo(piezo),.RX(RX_TX));
 
 //// Instantiate UART_tx (mimics command from BLE module) //////
-uart_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
+UART_tx iTX(.clk(clk),.rst_n(rst_n),.TX(RX_TX),.trmt(send_cmd),.tx_data(cmd),.tx_done(cmd_sent));
 
 /////////////////////////////////////
 // Instantiate reset synchronizer //
@@ -67,27 +68,17 @@ initial begin
   cmd = 8'h00;
   rider_lean = 16'h0000;
   ld_cell_lft = 12'h000;
-  ld_cell_rght = 12'h0000;
-  steerPot = 12'h0000;
-  batt = 12'h0000;
+  ld_cell_rght = 12'h000;
+  steerPot = 12'h000;
+  batt = 12'h000;
   OVR_I_lft = 0;
   OVR_I_rght = 0;
-  //Use parallel compound statement to check if sum_gt_min is 0 and sum_lt_min is 1
-  fork
-	//Error occurs when sum_gt_min set to 1
-	begin: timeout1
-		@(posedge iDUT.iSTR.sum_gt_min);
-		$display("Test fails: sum_gt_min is asserted at first");
-		$stop();
-	end: timeout1
-	//If sum_lt_min is asserted, disable timeou1
-	begin
-		wait(iDUT.iSTR.sum_lt_min == 1'b1);
-		disable timeout1;	//Continue testing
-	end
-  join
-  //Wait for some time
-  repeat(10) @(negedge clk);
+  repeat (10) begin
+    @(negedge clk);
+    if ({iDUT.iSTR.sum_gt_min, iDUT.iSTR.sum_lt_min} !== 2'b01) begin
+      $fatal(1, "An empty platform should be below the lower weight threshold");
+    end
+  end
   //Check the value of lft_ld, rght_ld and pwr_up
   if(iDUT.iSTR.lft_ld !== 12'h000) begin
 	$display("Test fails: lft_ld should be 0 at first");
@@ -102,20 +93,20 @@ initial begin
 	$stop();
   end
 
-  //Send 'g' to the segway but pwr_up should not be asserted
-  cmd = 8'h67;
+  //Send 'G' to the segway but pwr_up should not be asserted
+  cmd = "G";
   send_cmd = 1;
   //Deassert send_cmd after 1 clk period
   @(negedge clk) send_cmd = 0;
   repeat(100000) @(negedge clk);
-  //Pwr_up should not be asserted and state should still be in OFF
+  // The command arms the unit. Power stays off until the rider mounts.
   if(iDUT.pwr_up !== 0) begin
 	$display("Test fails: pwr_up is asserted when ld_cell are both 0");
 	$stop();
   end
-  if(iDUT.iAuth.cstate !== 2'b00) begin
-	$display("Test fails: Segway should stay in OFF state when ld_cell are both 0");
-	$stop();
+  if (iDUT.iAuth.cstate !== iDUT.iAuth.AUTHORIZED) begin
+    $display("Test fails: G should arm the unoccupied Segway");
+    $stop();
   end
   //Wait for sometime and change batt, ld_cell
   repeat(5000) @(negedge clk);
@@ -135,7 +126,7 @@ initial begin
 	end: timeout2
 	//If rider_off is deasserted, disable timeout2
 	begin
-		@(negedge iDUT.rider_off);
+		do @(negedge clk); while (iDUT.rider_off !== 1'b0);
 		disable timeout2;	//Continue testing
 	end
   join
@@ -180,7 +171,7 @@ initial begin
 	end: timeout4
 	//If diff_gt_1_4 not deasserted, disable timeou4
 	begin
-		@(negedge iDUT.iSTR.diff_gt_1_4);
+		do @(negedge clk); while (iDUT.iSTR.diff_gt_1_4 !== 1'b0);
 		disable timeout4;	//Continue testing
 	end
   join
@@ -211,7 +202,7 @@ initial begin
 	end: timeout6
 	//If diff_gt_15_16 asserted, disable timeout6
 	begin
-		@(posedge iDUT.iSTR.diff_gt_15_16);
+		do @(negedge clk); while (iDUT.iSTR.diff_gt_15_16 !== 1'b1);
 		disable timeout6;	//Continue testing
 	end
   join
@@ -232,14 +223,14 @@ initial begin
   ld_cell_lft = 12'h200;
   //Wait for en_steer be asserted
   wait(iDUT.en_steer == 1);
-  //Send signal 's' but pwr_up will still be high since rider_off is not asserted
+  //Send signal 'S' but pwr_up will still be high since rider_off is not asserted
   @(negedge clk);
-  cmd = 8'h73;
+  cmd = "S";
   send_cmd = 1;
   //Deassert send_cmd at not negedge of clk
   @(negedge clk) send_cmd = 0;
   //Wait for some time
-  repeat(30000) @(negedge clk);
+  @(posedge cmd_sent);
   //Check if pwr_up is still asserted
   if(iDUT.pwr_up !== 1) begin
 	$display("Test fails: pwr_up is deasserted when rider is still on");
@@ -258,7 +249,7 @@ initial begin
 	end: timeout7
 	//If rider_off asserted, disable timeout7
 	begin
-		@(posedge iDUT.rider_off);
+		do @(negedge clk); while (iDUT.rider_off !== 1'b1);
 		disable timeout7;	//Continue testing
 	end
   join

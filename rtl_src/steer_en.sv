@@ -19,8 +19,8 @@ module steer_en #(
 	wire sum_lt_min, sum_gt_min, diff_gt_15_16, diff_gt_1_4;
 	//internal value
 	wire[12:0] lr_sum;
-	wire signed[11:0] lr_diff;
-	wire[11:0] lr_abs;
+	wire signed[12:0] lr_diff;
+	wire[12:0] lr_abs;
 	wire[12:0] lr_sum_1_4;
 	wire[12:0] lr_sum_15_16;  
 	// timer size for fast_sim
@@ -40,13 +40,13 @@ module steer_en #(
 	assign tmr_full = &cnt1_4;
 
 	assign lr_sum = lft_ld + rght_ld;
-	assign lr_diff = lft_ld - rght_ld;
-	assign lr_abs = (lr_diff[11]) ? ~lr_diff: lr_diff[10:0];
-	assign lr_sum_1_4 = {{2{lr_sum[12]}},lr_sum[12:2]};	//1/4 == >>2
-	assign lr_sum_15_16 = lr_sum - {{4{lr_sum[12]}},lr_sum[12:4]}; // 15/16 = 1-1/16
+	assign lr_diff = $signed({1'b0,lft_ld}) - $signed({1'b0,rght_ld});
+	assign lr_abs = (lr_diff < 0) ? -lr_diff : lr_diff;
+	assign lr_sum_1_4 = (lr_sum >> 2);	//1/4 == >>2
+	assign lr_sum_15_16 = (lr_sum * 17'd15) >> 4;
 
 	// fed to SM
-	assign diff_gt_1_4 = (lr_abs > lr_sum_1_4) ? 1 : 0;  //when sum < 0 ....
+	assign diff_gt_1_4 = (lr_abs > lr_sum_1_4) ? 1 : 0;
 	assign diff_gt_15_16 = (lr_abs > lr_sum_15_16) ? 1 : 0;
 	assign sum_lt_min = (lr_sum < MIN_RIDER_WT - WT_HYSTERESIS) ? 1 : 0;
 	assign sum_gt_min = (lr_sum > MIN_RIDER_WT + WT_HYSTERESIS) ? 1 : 0;

@@ -1,20 +1,20 @@
 module SPI_ADC128S(clk,rst_n,SS_n,SCLK,MISO,MOSI,A2D_data,cmd,rdy);
-  //////////////////////////////////////////////////|
-  // Model of a SPI Slave similar to what might be ||
-  // found in a National Semi Conductor ADC128S    ||
-  // 12-bit A2D converter.  NOTE: this model       ||
-  // returns 0xABCD for the first read, and        ||
-  // whatever you wrote to it last for subsequent  ||
-  // reads.                                        ||
-  ///////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////
+  // Model of a SPI Secondary similar to what might be ||
+  // found in a National Semi Conductor ADC128S        ||
+  // 12-bit A2D converter.  NOTE: this model           ||
+  // returns 0xABCD for the first read, and            ||
+  // whatever you wrote to it last for subsequent      ||
+  // reads.                                            ||
+  ///////////////////////////////////////////////////////
 
   input clk,rst_n;			// clock and active low asynch reset
-  input SS_n;				// active low slave select
+  input SS_n;				// active low secondary select
   input SCLK;				// Serial clock
-  input MOSI;				// serial data in from master
+  input MOSI;				// serial data in from main
   input [15:0] A2D_data;	// Data A2D is sending
   
-  output MISO;				// serial data out to master
+  output MISO;				// serial data out to main
   output reg rdy;			// asserted when a transaction completes
   output [15:0] cmd;		// command to the A2D
   
